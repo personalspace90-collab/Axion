@@ -3,33 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Axion AI - Production Code</title>
+    <title>Axion AI - Your Intelligent Companion</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.0/axios.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        * { font-family: 'Inter', sans-serif; }
-        .glass { background: rgba(30, 30, 35, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .glass-strong { background: rgba(20, 20, 25, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); }
-        .message-bubble-user { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .message-bubble-ai { background: rgba(50, 50, 60, 0.8); }
-        .premium-gradient { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-        .slide-in { animation: slideIn 0.3s ease-out; }
-        @keyframes slideIn { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        .fade-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .glass {
+            background: rgba(30, 30, 35, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .glass-strong {
+            background: rgba(20, 20, 25, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .message-bubble-user {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .message-bubble-ai {
+            background: rgba(50, 50, 60, 0.8);
+        }
+        
+        .premium-gradient {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .shimmer {
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        
+        .typing-dot {
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+        
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .pulse-ring {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+        
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .otp-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
     </style>
 </head>
 <body class="bg-black text-white overflow-hidden">
     <div id="root"></div>
+
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect, useRef, createContext, useContext } = React;
         
+        // API Configuration - Backend placeholders
+        const API_BASE_URL = 'http://localhost:5000/api';
+        const API_KEYS = {
+            OPENAI: 'YOUR_OPENAI_API_KEY_HERE',
+            ELEVEN_LABS: 'YOUR_ELEVEN_LABS_API_KEY_HERE',
+            REPLICATE: 'YOUR_REPLICATE_API_KEY_HERE',
+            STABILITY_AI: 'YOUR_STABILITY_API_KEY_HERE'
+        };
+
+        // Context for global state
+        const AppContext = createContext();
+
         // Utility Components
         const Icon = ({ name, size = 24, className = "" }) => {
             const LucideIcon = window.lucide.icons[name];
@@ -37,59 +136,207 @@
         };
 
         const Button = ({ children, onClick, variant = 'primary', className = '', disabled = false }) => {
-            const baseStyle = "px-6 py-3 rounded-2xl font-medium transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50";
+            const baseStyle = "px-6 py-3 rounded-2xl font-medium transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed";
             const variants = {
-                primary: "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white",
+                primary: "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/25",
                 secondary: "glass text-white hover:bg-white/10",
-                premium: "premium-gradient text-white hover:opacity-90"
+                outline: "border border-white/20 hover:bg-white/5 text-white",
+                premium: "premium-gradient text-white shadow-lg shadow-pink-500/25 hover:opacity-90",
+                ghost: "hover:bg-white/5 text-gray-400 hover:text-white"
             };
-            return <button onClick={onClick} disabled={disabled} className={`${baseStyle} ${variants[variant]} ${className}`}>{children}</button>;
+            
+            return (
+                <button onClick={onClick} disabled={disabled} className={`${baseStyle} ${variants[variant]} ${className}`}>
+                    {children}
+                </button>
+            );
         };
 
         const Input = ({ placeholder, value, onChange, type = "text", className = "", icon = null }) => (
             <div className="relative">
                 {icon && <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">{icon}</div>}
-                <input type={type} value={value} onChange={onChange} placeholder={placeholder} 
-                    className={`w-full bg-white/5 border border-white/10 rounded-2xl px-4 ${icon ? 'pl-12' : ''} py-4 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-all ${className}`} />
+                <input
+                    type={type}
+                    value={value}
+                    onChange={onChange}
+                    placeholder={placeholder}
+                    className={`w-full bg-white/5 border border-white/10 rounded-2xl px-4 ${icon ? 'pl-12' : ''} py-4 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-all ${className}`}
+                />
             </div>
         );
 
-        // Authentication Screen
+        // Toast Notification Component
+        const Toast = ({ message, type = 'info', onClose }) => {
+            useEffect(() => {
+                const timer = setTimeout(onClose, 3000);
+                return () => clearTimeout(timer);
+            }, []);
+
+            const icons = {
+                success: 'CheckCircle',
+                error: 'XCircle',
+                info: 'Info',
+                warning: 'AlertTriangle'
+            };
+
+            const colors = {
+                success: 'bg-green-500/20 border-green-500/50 text-green-400',
+                error: 'bg-red-500/20 border-red-500/50 text-red-400',
+                info: 'bg-blue-500/20 border-blue-500/50 text-blue-400',
+                warning: 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400'
+            };
+
+            return (
+                <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-2xl border ${colors[type]} glass slide-in flex items-center gap-3`}>
+                    <Icon name={icons[type]} size={20} />
+                    <span className="font-medium">{message}</span>
+                </div>
+            );
+        };
+
+        // Premium Badge Component
+        const PremiumBadge = () => (
+            <span className="px-2 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-pink-500 to-rose-500 text-white flex items-center gap-1">
+                <Icon name="Crown" size={12} />
+                PLUS
+            </span>
+        );
+
+        // Auth Components
         const AuthScreen = ({ onLogin }) => {
-            const [mode, setMode] = useState('welcome');
+            const [mode, setMode] = useState('welcome'); // welcome, login, register, otp, forgot
             const [email, setEmail] = useState('');
             const [password, setPassword] = useState('');
             const [otp, setOtp] = useState(['', '', '', '', '', '']);
             const [agreed, setAgreed] = useState(false);
             const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+            const [countdown, setCountdown] = useState(30);
             const otpRefs = useRef([]);
 
+            useEffect(() => {
+                if (mode === 'otp' && countdown > 0) {
+                    const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
+                    return () => clearTimeout(timer);
+                }
+            }, [mode, countdown]);
+
             const handleOtpChange = (index, value) => {
+                if (value.length > 1) value = value[0];
                 if (!/^\d*$/.test(value)) return;
+                
                 const newOtp = [...otp];
-                newOtp[index] = value[0] || '';
+                newOtp[index] = value;
                 setOtp(newOtp);
-                if (value && index < 5) otpRefs.current[index + 1]?.focus();
+                
+                if (value && index < 5) {
+                    otpRefs.current[index + 1]?.focus();
+                }
             };
 
-            const validatePassword = (pass) => ({
-                length: pass.length >= 8 && pass.length <= 30,
-                lower: /[a-z]/.test(pass),
-                upper: /[A-Z]/.test(pass),
-                number: /\d/.test(pass)
-            });
+            const handleOtpKeyDown = (index, e) => {
+                if (e.key === 'Backspace' && !otp[index] && index > 0) {
+                    otpRefs.current[index - 1]?.focus();
+                }
+            };
+
+            const validatePassword = (pass) => {
+                const checks = {
+                    length: pass.length >= 8 && pass.length <= 30,
+                    lower: /[a-z]/.test(pass),
+                    upper: /[A-Z]/.test(pass),
+                    number: /\d/.test(pass)
+                };
+                return checks;
+            };
+
+            const handleRegister = async () => {
+                if (!email || !agreed) {
+                    setError('Please fill all fields and agree to terms');
+                    return;
+                }
+                setLoading(true);
+                // Simulate API call
+                setTimeout(() => {
+                    setLoading(false);
+                    setMode('otp');
+                    setCountdown(30);
+                }, 1500);
+            };
+
+            const handleVerifyOtp = async () => {
+                const otpString = otp.join('');
+                if (otpString.length !== 6) {
+                    setError('Please enter complete OTP');
+                    return;
+                }
+                setLoading(true);
+                setTimeout(() => {
+                    setLoading(false);
+                    setMode('createPassword');
+                }, 1500);
+            };
+
+            const handleCreatePassword = async () => {
+                const checks = validatePassword(password);
+                if (!Object.values(checks).every(Boolean)) {
+                    setError('Password does not meet requirements');
+                    return;
+                }
+                setLoading(true);
+                setTimeout(() => {
+                    setLoading(false);
+                    onLogin({ email, isPremium: false, name: email.split('@')[0] });
+                }, 1500);
+            };
+
+            const handleLogin = async () => {
+                if (!email || !password) {
+                    setError('Please fill all fields');
+                    return;
+                }
+                setLoading(true);
+                setTimeout(() => {
+                    setLoading(false);
+                    onLogin({ email, isPremium: false, name: email.split('@')[0] });
+                }, 1500);
+            };
+
+            const PasswordCheck = ({ label, checked }) => (
+                <div className="flex items-center gap-2 text-sm">
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center ${checked ? 'bg-green-500' : 'bg-white/10'}`}>
+                        <Icon name="Check" size={12} className={checked ? 'text-white' : 'text-gray-500'} />
+                    </div>
+                    <span className={checked ? 'text-white' : 'text-gray-500'}>{label}</span>
+                </div>
+            );
 
             if (mode === 'welcome') {
                 return (
-                    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6">
-                        <div className="w-24 h-24 mx-auto mb-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center">
-                            <Icon name="Sparkles" size={48} className="text-white" />
-                        </div>
-                        <h1 className="text-4xl font-bold mb-2">Axion AI</h1>
-                        <p className="text-gray-400 mb-8">Your Intelligent Companion</p>
-                        <div className="space-y-3 w-full max-w-sm">
-                            <Button onClick={() => setMode('register')} className="w-full">Get Started</Button>
-                            <Button variant="secondary" onClick={() => setMode('login')} className="w-full">I already have an account</Button>
+                    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-b from-indigo-900/20 to-transparent" />
+                        
+                        <div className="relative z-10 text-center space-y-8 max-w-md w-full">
+                            <div className="w-24 h-24 mx-auto relative">
+                                <div className="absolute inset-0 bg-indigo-500 rounded-3xl rotate-6 opacity-50 blur-xl" />
+                                <div className="relative w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center">
+                                    <Icon name="Sparkles" size={48} className="text-white" />
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h1 className="text-4xl font-bold mb-2">Axion AI</h1>
+                                <p className="text-gray-400">Your Intelligent Companion</p>
+                            </div>
+
+                            <div className="space-y-3">
+                                <Button onClick={() => setMode('register')} className="w-full">
+                                    Get Started
+                                </Button>
+                                <Button variant="outline" onClick={() => setMode('login')} className="w-full">
+                                    I already have an account
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 );
@@ -98,19 +345,67 @@
             if (mode === 'register') {
                 return (
                     <div className="min-h-screen bg-black flex flex-col p-6">
-                        <button onClick={() => setMode('welcome')} className="flex items-center gap-2 text-gray-400 mb-8">
-                            <Icon name="ArrowLeft" size={20} /> Back
+                        <button onClick={() => setMode('welcome')} className="flex items-center gap-2 text-gray-400 hover:text-white mb-8">
+                            <Icon name="ArrowLeft" size={20} />
+                            Back
                         </button>
+
                         <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full space-y-6">
-                            <h2 className="text-3xl font-bold text-center">Create Account</h2>
-                            <Input placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} icon={<Icon name="Mail" size={20} />} />
-                            <label className="flex items-start gap-3 p-4 rounded-2xl bg-white/5 border border-white/10 cursor-pointer">
-                                <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1 w-5 h-5 rounded bg-transparent text-indigo-500" />
-                                <span className="text-sm text-gray-400">I agree to the Terms of Service and Privacy Policy</span>
-                            </label>
-                            <Button onClick={() => { setLoading(true); setTimeout(() => { setLoading(false); setMode('otp'); }, 1000); }} disabled={!email || !agreed || loading} className="w-full">
-                                {loading ? 'Sending...' : 'Continue'}
-                            </Button>
+                            <div className="text-center space-y-2">
+                                <h2 className="text-3xl font-bold">Create Account</h2>
+                                <p className="text-gray-400">Start your journey with Axion</p>
+                            </div>
+
+                            {error && (
+                                <div className="p-4 rounded-xl bg-red-500/20 border border-red-500/50 text-red-400 text-sm">
+                                    {error}
+                                </div>
+                            )}
+
+                            <div className="space-y-4">
+                                <Input
+                                    placeholder="Email address"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    icon={<Icon name="Mail" size={20} />}
+                                />
+
+                                <label className="flex items-start gap-3 p-4 rounded-2xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-colors">
+                                    <input
+                                        type="checkbox"
+                                        checked={agreed}
+                                        onChange={(e) => setAgreed(e.target.checked)}
+                                        className="mt-1 w-5 h-5 rounded border-white/20 bg-transparent text-indigo-500 focus:ring-indigo-500"
+                                    />
+                                    <span className="text-sm text-gray-400">
+                                        I agree to the <span className="text-indigo-400">Terms of Service</span> and <span className="text-indigo-400">Privacy Policy</span>
+                                    </span>
+                                </label>
+
+                                <Button onClick={handleRegister} disabled={loading} className="w-full">
+                                    {loading ? 'Sending OTP...' : 'Continue'}
+                                </Button>
+                            </div>
+
+                            <div className="relative">
+                                <div className="absolute inset-0 flex items-center">
+                                    <div className="w-full border-t border-white/10"></div>
+                                </div>
+                                <div className="relative flex justify-center text-sm">
+                                    <span className="px-2 bg-black text-gray-500">Or continue with</span>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <Button variant="secondary" className="flex-1">
+                                    <Icon name="Chrome" size={20} />
+                                    Google
+                                </Button>
+                                <Button variant="secondary" className="flex-1">
+                                    <Icon name="Send" size={20} />
+                                    Telegram
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 );
@@ -119,17 +414,59 @@
             if (mode === 'otp') {
                 return (
                     <div className="min-h-screen bg-black flex flex-col p-6">
-                        <button onClick={() => setMode('register')} className="flex items-center gap-2 text-gray-400 mb-8"><Icon name="ArrowLeft" size={20} /> Back</button>
+                        <button onClick={() => setMode('register')} className="flex items-center gap-2 text-gray-400 hover:text-white mb-8">
+                            <Icon name="ArrowLeft" size={20} />
+                            Back
+                        </button>
+
                         <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full space-y-6">
-                            <h2 className="text-3xl font-bold text-center">Verify Email</h2>
-                            <p className="text-center text-gray-400">Code sent to {email}</p>
+                            <div className="text-center space-y-2">
+                                <div className="w-16 h-16 mx-auto bg-indigo-500/20 rounded-full flex items-center justify-center mb-4">
+                                    <Icon name="ShieldCheck" size={32} className="text-indigo-400" />
+                                </div>
+                                <h2 className="text-3xl font-bold">Verify Email</h2>
+                                <p className="text-gray-400">
+                                    Code sent to <span className="text-white">{email}</span>
+                                </p>
+                            </div>
+
+                            {error && (
+                                <div className="p-4 rounded-xl bg-red-500/20 border border-red-500/50 text-red-400 text-sm">
+                                    {error}
+                                </div>
+                            )}
+
                             <div className="flex justify-center gap-2">
                                 {otp.map((digit, idx) => (
-                                    <input key={idx} ref={el => otpRefs.current[idx] = el} type="text" value={digit} onChange={(e) => handleOtpChange(idx, e.target.value)} 
-                                        className="w-12 h-14 text-center text-2xl font-bold bg-white/5 border-2 border-white/10 rounded-xl focus:border-indigo-500 focus:outline-none text-white" maxLength={1} />
+                                    <input
+                                        key={idx}
+                                        ref={el => otpRefs.current[idx] = el}
+                                        type="text"
+                                        value={digit}
+                                        onChange={(e) => handleOtpChange(idx, e.target.value)}
+                                        onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                                        className="w-12 h-14 text-center text-2xl font-bold bg-white/5 border-2 border-white/10 rounded-xl focus:border-indigo-500 focus:outline-none text-white otp-input"
+                                        maxLength={1}
+                                    />
                                 ))}
                             </div>
-                            <Button onClick={() => setMode('createPassword')} className="w-full">Verify</Button>
+
+                            <Button onClick={handleVerifyOtp} disabled={loading} className="w-full">
+                                {loading ? 'Verifying...' : 'Verify'}
+                            </Button>
+
+                            <div className="text-center space-y-2">
+                                <p className="text-gray-400 text-sm">
+                                    Didn't receive code?{' '}
+                                    <button 
+                                        disabled={countdown > 0}
+                                        onClick={() => setCountdown(30)}
+                                        className={`${countdown > 0 ? 'text-gray-600' : 'text-indigo-400 hover:text-indigo-300'}`}
+                                    >
+                                        Resend {countdown > 0 && `(${countdown}s)`}
+                                    </button>
+                                </p>
+                            </div>
                         </div>
                     </div>
                 );
@@ -140,19 +477,41 @@
                 return (
                     <div className="min-h-screen bg-black flex flex-col p-6">
                         <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full space-y-6">
-                            <h2 className="text-3xl font-bold text-center">Create Password</h2>
-                            <Input type="password" placeholder="Create password" value={password} onChange={(e) => setPassword(e.target.value)} icon={<Icon name="Lock" size={20} />} />
-                            <div className="space-y-2 p-4 rounded-2xl bg-white/5">
-                                {Object.entries({length: '8-30 characters', lower: 'One lowercase', upper: 'One uppercase', number: 'One number'}).map(([key, label]) => (
-                                    <div key={key} className="flex items-center gap-2 text-sm">
-                                        <Icon name="Check" size={16} className={checks[key] ? 'text-green-400' : 'text-gray-600'} />
-                                        <span className={checks[key] ? 'text-white' : 'text-gray-500'}>{label}</span>
-                                    </div>
-                                ))}
+                            <div className="text-center space-y-2">
+                                <h2 className="text-3xl font-bold">Create Password</h2>
+                                <p className="text-gray-400">Secure your account</p>
                             </div>
-                            <Button onClick={() => onLogin({ email, isPremium: false, name: email.split('@')[0] })} disabled={!Object.values(checks).every(Boolean)} className="w-full">
-                                Complete
-                            </Button>
+
+                            {error && (
+                                <div className="p-4 rounded-xl bg-red-500/20 border border-red-500/50 text-red-400 text-sm">
+                                    {error}
+                                </div>
+                            )}
+
+                            <div className="space-y-4">
+                                <Input
+                                    type="password"
+                                    placeholder="Create password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    icon={<Icon name="Lock" size={20} />}
+                                />
+
+                                <div className="space-y-2 p-4 rounded-2xl bg-white/5">
+                                    <PasswordCheck label="8-30 characters" checked={checks.length} />
+                                    <PasswordCheck label="At least one lowercase letter" checked={checks.lower} />
+                                    <PasswordCheck label="At least one uppercase letter" checked={checks.upper} />
+                                    <PasswordCheck label="At least one number" checked={checks.number} />
+                                </div>
+
+                                <Button 
+                                    onClick={handleCreatePassword} 
+                                    disabled={loading || !Object.values(checks).every(Boolean)} 
+                                    className="w-full"
+                                >
+                                    {loading ? 'Creating Account...' : 'Complete Registration'}
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 );
@@ -161,80 +520,267 @@
             if (mode === 'login') {
                 return (
                     <div className="min-h-screen bg-black flex flex-col p-6">
-                        <button onClick={() => setMode('welcome')} className="flex items-center gap-2 text-gray-400 mb-8"><Icon name="ArrowLeft" size={20} /> Back</button>
+                        <button onClick={() => setMode('welcome')} className="flex items-center gap-2 text-gray-400 hover:text-white mb-8">
+                            <Icon name="ArrowLeft" size={20} />
+                            Back
+                        </button>
+
                         <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full space-y-6">
-                            <h2 className="text-3xl font-bold text-center">Welcome Back</h2>
-                            <Input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} icon={<Icon name="Mail" size={20} />} />
-                            <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} icon={<Icon name="Lock" size={20} />} />
-                            <Button onClick={() => onLogin({ email, isPremium: false, name: email.split('@')[0] })} className="w-full">Sign In</Button>
-                            <p className="text-center text-gray-400 text-sm">Don't have an account? <button onClick={() => setMode('register')} className="text-indigo-400">Sign up</button></p>
+                            <div className="text-center space-y-2">
+                                <h2 className="text-3xl font-bold">Welcome Back</h2>
+                                <p className="text-gray-400">Sign in to continue</p>
+                            </div>
+
+                            {error && (
+                                <div className="p-4 rounded-xl bg-red-500/20 border border-red-500/50 text-red-400 text-sm">
+                                    {error}
+                                </div>
+                            )}
+
+                            <div className="space-y-4">
+                                <Input
+                                    placeholder="Email address"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    icon={<Icon name="Mail" size={20} />}
+                                />
+
+                                <Input
+                                    type="password"
+                                    placeholder="Password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    icon={<Icon name="Lock" size={20} />}
+                                />
+
+                                <div className="flex justify-end">
+                                    <button onClick={() => setMode('forgot')} className="text-sm text-indigo-400 hover:text-indigo-300">
+                                        Forgot password?
+                                    </button>
+                                </div>
+
+                                <Button onClick={handleLogin} disabled={loading} className="w-full">
+                                    {loading ? 'Signing in...' : 'Sign In'}
+                                </Button>
+                            </div>
+
+                            <p className="text-center text-gray-400 text-sm">
+                                Don't have an account?{' '}
+                                <button onClick={() => setMode('register')} className="text-indigo-400 hover:text-indigo-300">
+                                    Sign up
+                                </button>
+                            </p>
                         </div>
                     </div>
                 );
             }
+
+            if (mode === 'forgot') {
+                return (
+                    <div className="min-h-screen bg-black flex flex-col p-6">
+                        <button onClick={() => setMode('login')} className="flex items-center gap-2 text-gray-400 hover:text-white mb-8">
+                            <Icon name="ArrowLeft" size={20} />
+                            Back
+                        </button>
+
+                        <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full space-y-6">
+                            <div className="text-center space-y-2">
+                                <h2 className="text-3xl font-bold">Reset Password</h2>
+                                <p className="text-gray-400">Enter your email to receive reset code</p>
+                            </div>
+
+                            <div className="space-y-4">
+                                <Input
+                                    placeholder="Email address"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    icon={<Icon name="Mail" size={20} />}
+                                />
+
+                                <Button onClick={() => { setMode('otp'); setCountdown(30); }} className="w-full">
+                                    Send Reset Code
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
             return null;
         };
 
-        // Sidebar Navigation
-        const Sidebar = ({ isOpen, onClose, user, onNavigate, currentView, onNewChat }) => {
+        // Sidebar Component
+        const Sidebar = ({ isOpen, onClose, user, onNavigate, currentView, chats, onNewChat, onSelectChat }) => {
             const menuItems = [
-                { id: 'chat', label: 'New Chat', icon: 'MessageSquarePlus', action: onNewChat },
-                { id: 'images', label: 'Images', icon: 'Image' },
-                { id: 'video', label: 'Video', icon: 'Video' },
-                { id: 'audio', label: 'Audio', icon: 'Headphones' },
-                { id: 'novel', label: 'Novel', icon: 'BookOpen' },
+                { id: 'chat', label: 'New Chat', icon: 'MessageSquarePlus', shortcut: '⌘N' },
                 { id: 'tasks', label: 'Tasks', icon: 'CheckSquare' },
+                { id: 'images', label: 'Images', icon: 'Image' },
+                { id: 'audio', label: 'Audio', icon: 'Headphones' },
+                { id: 'video', label: 'Video', icon: 'Video' },
+                { id: 'novel', label: 'Novel Writing', icon: 'BookOpen' },
+                { id: 'divider1', divider: true },
                 { id: 'upgrade', label: 'Upgrade', icon: 'Crown', premium: true },
+                { id: 'sessions', label: 'Sessions', icon: 'History' },
                 { id: 'settings', label: 'Settings', icon: 'Settings' },
+                { id: 'admin', label: 'Admin', icon: 'Shield', adminOnly: true },
+                { id: 'divider2', divider: true },
                 { id: 'logout', label: 'Log Out', icon: 'LogOut', danger: true },
             ];
 
+            const recentChats = chats.slice(0, 5);
+
             return (
                 <>
-                    {isOpen && <div className="fixed inset-0 bg-black/60 z-40 lg:hidden" onClick={onClose} />}
-                    <div className={`fixed left-0 top-0 h-full w-80 glass-strong z-50 transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 border-r border-white/10 flex flex-col`}>
-                        <div className="p-4 border-b border-white/10 flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-                                <Icon name="Sparkles" size={20} className="text-white" />
-                            </div>
-                            <div>
-                                <h1 className="font-bold">Axion AI</h1>
-                                {user?.isPremium && <span className="text-xs bg-gradient-to-r from-pink-500 to-rose-500 text-white px-2 py-0.5 rounded-full">PLUS</span>}
-                            </div>
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-3 space-y-1">
-                            {menuItems.map((item) => (
-                                <button key={item.id} onClick={() => { item.action ? item.action() : onNavigate(item.id); onClose(); }}
-                                    className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${currentView === item.id ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'} ${item.danger ? 'hover:bg-red-500/20 hover:text-red-400' : ''}`}>
-                                    <Icon name={item.icon} size={20} className={item.premium ? 'text-pink-400' : ''} />
-                                    <span>{item.label}</span>
-                                    {item.premium && !user?.isPremium && <Icon name="Lock" size={14} className="ml-auto text-pink-400" />}
-                                </button>
-                            ))}
-                        </div>
-                        <div className="p-4 border-t border-white/10">
+                    {isOpen && (
+                        <div 
+                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+                            onClick={onClose}
+                        />
+                    )}
+                    
+                    <div className={`fixed left-0 top-0 h-full w-80 glass-strong z-50 transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static border-r border-white/10 flex flex-col`}>
+                        <div className="p-4 border-b border-white/10 flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center font-bold">
+                                <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+                                    <Icon name="Sparkles" size={20} className="text-white" />
+                                </div>
+                                <div>
+                                    <h1 className="font-bold text-lg">Axion AI</h1>
+                                    {user?.isPremium && <PremiumBadge />}
+                                </div>
+                            </div>
+                            <button onClick={onClose} className="lg:hidden p-2 hover:bg-white/10 rounded-lg">
+                                <Icon name="X" size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-3 space-y-1 scrollbar-hide">
+                            {menuItems.map((item) => {
+                                if (item.divider) return <div key={item.id} className="my-3 border-t border-white/10" />;
+                                if (item.adminOnly && !user?.isAdmin) return null;
+                                
+                                return (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => {
+                                            if (item.id === 'chat') onNewChat();
+                                            else if (item.id === 'logout') {
+                                                if (confirm('Are you sure you want to log out?')) {
+                                                    window.location.reload();
+                                                }
+                                            }
+                                            else onNavigate(item.id);
+                                            onClose();
+                                        }}
+                                        className={`w-full flex items-center justify-between p-3 rounded-xl transition-all group ${
+                                            currentView === item.id 
+                                                ? 'bg-white/10 text-white' 
+                                                : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                        } ${item.danger ? 'hover:bg-red-500/20 hover:text-red-400' : ''}`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <Icon name={item.icon} size={20} className={item.premium ? 'text-pink-400' : ''} />
+                                            <span className="font-medium">{item.label}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {item.premium && !user?.isPremium && <Icon name="Lock" size={14} className="text-pink-400" />}
+                                            {item.shortcut && <span className="text-xs text-gray-600">{item.shortcut}</span>}
+                                        </div>
+                                    </button>
+                                );
+                            })}
+
+                            {recentChats.length > 0 && (
+                                <div className="mt-6">
+                                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Recent Chats</h3>
+                                    <div className="space-y-1">
+                                        {recentChats.map((chat) => (
+                                            <button
+                                                key={chat.id}
+                                                onClick={() => onSelectChat(chat)}
+                                                className="w-full text-left p-3 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-all group flex items-center gap-3"
+                                            >
+                                                <Icon name="MessageSquare" size={16} />
+                                                <span className="truncate flex-1 text-sm">{chat.title}</span>
+                                                <Icon name="MoreVertical" size={14} className="opacity-0 group-hover:opacity-100" />
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-4 border-t border-white/10">
+                            <button 
+                                onClick={() => onNavigate('profile')}
+                                className="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-white/5 transition-colors"
+                            >
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold">
                                     {user?.name?.[0]?.toUpperCase()}
                                 </div>
-                                <div className="flex-1 overflow-hidden">
-                                    <p className="font-medium text-sm truncate">{user?.name}</p>
-                                    <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                                <div className="flex-1 text-left">
+                                    <p className="font-medium text-sm">{user?.name}</p>
+                                    <p className="text-xs text-gray-500">{user?.email}</p>
                                 </div>
-                            </div>
+                                <Icon name="ChevronRight" size={16} className="text-gray-500" />
+                            </button>
                         </div>
                     </div>
                 </>
             );
         };
 
-        // Main Chat Interface
-        const ChatInterface = ({ messages, onSendMessage, inputValue, setInputValue, isTyping, isPrivate, setIsPrivate, user, onOpenAttach, onStartVoice, onStartCall }) => {
+        // Chat Interface
+        const ChatInterface = ({ 
+            messages, 
+            onSendMessage, 
+            inputValue, 
+            setInputValue, 
+            isTyping, 
+            isPrivate, 
+            setIsPrivate,
+            user,
+            onOpenAttachMenu,
+            onStartVoice,
+            onStartCall,
+            usageLimits
+        }) => {
             const messagesEndRef = useRef(null);
-            useEffect(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), [messages, isTyping]);
+            const [showContextMenu, setShowContextMenu] = useState(null);
+            const [selectedMessage, setSelectedMessage] = useState(null);
+
+            useEffect(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, [messages, isTyping]);
+
+            const handleContextMenu = (e, message) => {
+                e.preventDefault();
+                setSelectedMessage(message);
+                setShowContextMenu({ x: e.clientX, y: e.clientY });
+            };
+
+            const copyMessage = (text) => {
+                navigator.clipboard.writeText(text);
+                setShowContextMenu(null);
+            };
+
+            const shareMessage = async (text) => {
+                if (navigator.share) {
+                    await navigator.share({ text });
+                } else {
+                    copyMessage(text);
+                }
+                setShowContextMenu(null);
+            };
+
+            const editMessage = (message) => {
+                setInputValue(message.text);
+                setShowContextMenu(null);
+            };
 
             return (
-                <div className="flex-1 flex flex-col h-full">
+                <div className="flex-1 flex flex-col h-full relative">
+                    {/* Header */}
                     <div className="h-16 border-b border-white/10 flex items-center justify-between px-4 glass">
                         <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
@@ -242,61 +788,210 @@
                             </div>
                             <div>
                                 <h2 className="font-semibold">Axion</h2>
-                                <div className="flex items-center gap-1 text-xs text-green-400"><div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" /> Online</div>
+                                <div className="flex items-center gap-1 text-xs text-green-400">
+                                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                                    Online
+                                </div>
                             </div>
                         </div>
+
                         <div className="flex items-center gap-2">
                             {!user?.isPremium && (
-                                <button className="px-3 py-1.5 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 text-xs font-medium text-white flex items-center gap-1">
-                                    <Icon name="Crown" size={12} /> Get Plus
+                                <button 
+                                    onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'upgrade' }))}
+                                    className="px-3 py-1.5 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 text-xs font-medium text-white flex items-center gap-1 hover:opacity-90 transition-opacity"
+                                >
+                                    <Icon name="Crown" size={12} />
+                                    Get Plus
                                 </button>
                             )}
-                            <button onClick={() => setIsPrivate(!isPrivate)} className={`p-2 rounded-xl ${isPrivate ? 'bg-indigo-500/20 text-indigo-400' : 'text-gray-400 hover:bg-white/5'}`}>
+                            
+                            <button 
+                                onClick={() => setIsPrivate(!isPrivate)}
+                                className={`p-2 rounded-xl transition-colors ${isPrivate ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-white/5 text-gray-400'}`}
+                                title={isPrivate ? 'Private mode on' : 'Private mode off'}
+                            >
                                 <Icon name={isPrivate ? "ShieldCheck" : "Shield"} size={20} />
+                            </button>
+                            
+                            <button className="p-2 hover:bg-white/5 rounded-xl text-gray-400">
+                                <Icon name="UserPlus" size={20} />
+                            </button>
+                            
+                            <button className="p-2 hover:bg-white/5 rounded-xl text-gray-400">
+                                <Icon name="RefreshCw" size={20} />
                             </button>
                         </div>
                     </div>
 
+                    {/* Messages */}
                     <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
                         {messages.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-50">
-                                <Icon name="Sparkles" size={64} className="text-indigo-400" />
+                                <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center">
+                                    <Icon name="Sparkles" size={48} className="text-indigo-400" />
+                                </div>
                                 <div>
                                     <h3 className="text-2xl font-bold mb-2">How can I help you today?</h3>
-                                    <p className="text-gray-400">Start a conversation with Axion AI</p>
+                                    <p className="text-gray-400">Start a conversation or try the options below</p>
+                                </div>
+                                <div className="flex flex-wrap justify-center gap-2 max-w-2xl">
+                                    {['Explain quantum computing', 'Write a poem about stars', 'Help me debug code', 'Plan a workout routine'].map((suggestion) => (
+                                        <button
+                                            key={suggestion}
+                                            onClick={() => onSendMessage(suggestion)}
+                                            className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm hover:bg-white/10 transition-colors"
+                                        >
+                                            {suggestion}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
                         ) : (
-                            messages.map((msg, idx) => (
-                                <div key={idx} className={`flex ${msg.isUser ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[80%] p-4 rounded-2xl ${msg.isUser ? 'message-bubble-user rounded-br-md' : 'message-bubble-ai rounded-bl-md border border-white/10'}`}>
-                                        <p>{msg.text}</p>
+                            messages.map((message, idx) => (
+                                <div
+                                    key={idx}
+                                    onContextMenu={(e) => handleContextMenu(e, message)}
+                                    className={`flex ${message.isUser ? 'justify-end' : 'justify-start'} group`}
+                                >
+                                    <div className={`max-w-[80%] lg:max-w-[70%] space-y-1 ${message.isUser ? 'items-end' : 'items-start'}`}>
+                                        <div className={`p-4 rounded-2xl ${
+                                            message.isUser 
+                                                ? 'message-bubble-user text-white rounded-br-md' 
+                                                : 'message-bubble-ai text-gray-100 rounded-bl-md border border-white/10'
+                                        }`}>
+                                            <p className="leading-relaxed">{message.text}</p>
+                                            {message.attachments?.map((att, i) => (
+                                                <div key={i} className="mt-2 p-2 bg-black/20 rounded-lg flex items-center gap-2 text-sm">
+                                                    <Icon name={att.type === 'image' ? 'Image' : 'FileText'} size={16} />
+                                                    <span className="truncate">{att.name}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity px-1">
+                                            <span className="text-xs text-gray-500">{message.time}</span>
+                                            {message.isUser && <Icon name="CheckCheck" size={12} className="text-indigo-400" />}
+                                        </div>
                                     </div>
                                 </div>
                             ))
                         )}
+                        
                         {isTyping && (
                             <div className="flex justify-start">
-                                <div className="message-bubble-ai p-4 rounded-2xl rounded-bl-md border border-white/10 flex gap-1">
-                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}} />
-                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}} />
+                                <div className="message-bubble-ai p-4 rounded-2xl rounded-bl-md border border-white/10 flex items-center gap-1">
+                                    <div className="w-2 h-2 bg-gray-400 rounded-full typing-dot" />
+                                    <div className="w-2 h-2 bg-gray-400 rounded-full typing-dot" />
+                                    <div className="w-2 h-2 bg-gray-400 rounded-full typing-dot" />
                                 </div>
                             </div>
                         )}
+                        
+                        {usageLimits?.messages <= 0 && (
+                            <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-center">
+                                <Icon name="AlertTriangle" size={20} className="mx-auto mb-2" />
+                                <p className="text-sm">Daily message limit reached. Upgrade to Plus for unlimited messages.</p>
+                            </div>
+                        )}
+                        
                         <div ref={messagesEndRef} />
                     </div>
 
+                    {/* Input Area */}
                     <div className="p-4 border-t border-white/10 glass">
-                        <div className="max-w-4xl mx-auto flex items-end gap-2 bg-white/5 border border-white/10 rounded-3xl p-2 focus-within:border-indigo-500/50">
-                            <button onClick={onOpenAttach} className="p-3 hover:bg-white/10 rounded-full text-gray-400 hover:text-white"><Icon name="Plus" size={20} /></button>
-                            <textarea value={inputValue} onChange={(e) => setInputValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSendMessage(); }}}
-                                placeholder="Ask Axion anything..." className="flex-1 bg-transparent border-none outline-none text-white placeholder-gray-500 resize-none py-3 max-h-32 min-h-[48px]" rows={1} />
-                            <button onClick={onStartVoice} className="p-3 hover:bg-white/10 rounded-full text-gray-400 hover:text-white"><Icon name="Mic" size={20} /></button>
-                            <button onClick={onStartCall} className="p-3 hover:bg-white/10 rounded-full text-gray-400 hover:text-white"><Icon name="Phone" size={20} /></button>
-                            <button onClick={() => onSendMessage()} disabled={!inputValue.trim()} className="p-3 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 rounded-full text-white"><Icon name="Send" size={20} /></button>
+                        <div className="max-w-4xl mx-auto relative">
+                            <div className="flex items-end gap-2 bg-white/5 border border-white/10 rounded-3xl p-2 focus-within:border-indigo-500/50 transition-colors">
+                                <button 
+                                    onClick={onOpenAttachMenu}
+                                    className="p-3 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-white flex-shrink-0"
+                                >
+                                    <Icon name="Plus" size={20} />
+                                </button>
+                                
+                                <textarea
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            onSendMessage();
+                                        }
+                                    }}
+                                    placeholder={usageLimits?.messages > 0 ? "Ask Axion anything..." : "Upgrade to send messages"}
+                                    disabled={usageLimits?.messages <= 0}
+                                    className="flex-1 bg-transparent border-none outline-none text-white placeholder-gray-500 resize-none max-h-32 py-3 min-h-[48px] scrollbar-hide disabled:opacity-50"
+                                    rows={1}
+                                    style={{ height: 'auto' }}
+                                />
+                                
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                    <button 
+                                        onClick={onStartVoice}
+                                        className="p-3 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-white"
+                                    >
+                                        <Icon name="Mic" size={20} />
+                                    </button>
+                                    
+                                    <button 
+                                        onClick={onStartCall}
+                                        className="p-3 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-white"
+                                    >
+                                        <Icon name="Phone" size={20} />
+                                    </button>
+                                    
+                                    <button 
+                                        onClick={() => onSendMessage()}
+                                        disabled={!inputValue.trim() || usageLimits?.messages <= 0}
+                                        className="p-3 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 disabled:hover:bg-indigo-500 rounded-full transition-colors text-white"
+                                    >
+                                        <Icon name="Send" size={20} />
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <p className="text-center text-xs text-gray-600 mt-2">
+                                Axion can make mistakes. Consider checking important information.
+                            </p>
                         </div>
                     </div>
+
+                    {/* Context Menu */}
+                    {showContextMenu && (
+                        <>
+                            <div 
+                                className="fixed inset-0 z-50"
+                                onClick={() => setShowContextMenu(null)}
+                            />
+                            <div 
+                                className="fixed z-50 glass-strong border border-white/10 rounded-xl overflow-hidden shadow-2xl"
+                                style={{ top: showContextMenu.y, left: showContextMenu.x }}
+                            >
+                                <button 
+                                    onClick={() => copyMessage(selectedMessage?.text)}
+                                    className="w-full px-4 py-3 text-left hover:bg-white/5 flex items-center gap-3 text-sm"
+                                >
+                                    <Icon name="Copy" size={16} />
+                                    Copy
+                                </button>
+                                <button 
+                                    onClick={() => shareMessage(selectedMessage?.text)}
+                                    className="w-full px-4 py-3 text-left hover:bg-white/5 flex items-center gap-3 text-sm"
+                                >
+                                    <Icon name="Share2" size={16} />
+                                    Share
+                                </button>
+                                {selectedMessage?.isUser && (
+                                    <button 
+                                        onClick={() => editMessage(selectedMessage)}
+                                        className="w-full px-4 py-3 text-left hover:bg-white/5 flex items-center gap-3 text-sm"
+                                    >
+                                        <Icon name="Edit2" size={16} />
+                                        Edit
+                                    </button>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </div>
             );
         };
@@ -304,27 +999,42 @@
         // Attachment Menu Modal
         const AttachMenu = ({ isOpen, onClose, onSelect }) => {
             if (!isOpen) return null;
+
             const options = [
-                { id: 'camera', label: 'Camera', icon: 'Camera' },
-                { id: 'photo', label: 'Photos', icon: 'Image' },
-                { id: 'file', label: 'Files', icon: 'FileUp' },
-                { id: 'think', label: 'Think Harder', icon: 'Brain', premium: true },
-                { id: 'research', label: 'Research', icon: 'Search', premium: true },
-                { id: 'study', label: 'Study', icon: 'GraduationCap', premium: true },
+                { id: 'camera', label: 'Take Photo', icon: 'Camera', desc: 'Capture a new image' },
+                { id: 'photo', label: 'Photo Library', icon: 'Image', desc: 'Choose from gallery' },
+                { id: 'file', label: 'Send File', icon: 'FileUp', desc: 'Documents, PDFs, etc.' },
+                { id: 'think', label: 'Think Harder', icon: 'Brain', desc: 'Deeper analysis', premium: true },
+                { id: 'research', label: 'Deep Research', icon: 'Search', desc: 'Comprehensive research', premium: true },
+                { id: 'shopping', label: 'Shopping Research', icon: 'ShoppingBag', desc: 'Find best products', premium: true },
+                { id: 'study', label: 'Study & Learn', icon: 'GraduationCap', desc: 'Educational mode', premium: true },
+                { id: 'quiz', label: 'Quiz Mode', icon: 'HelpCircle', desc: 'Test your knowledge', premium: true },
             ];
+
             return (
-                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4" onClick={onClose}>
-                    <div className="w-full max-w-lg glass-strong rounded-3xl p-4 fade-in" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-4">
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm p-4 sm:items-center">
+                    <div className="w-full max-w-lg glass-strong rounded-3xl overflow-hidden fade-in">
+                        <div className="p-4 border-b border-white/10 flex items-center justify-between">
                             <h3 className="font-semibold">Add Attachment</h3>
-                            <button onClick={onClose}><Icon name="X" size={20} /></button>
+                            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full">
+                                <Icon name="X" size={20} />
+                            </button>
                         </div>
-                        <div className="grid grid-cols-3 gap-3">
-                            {options.map(opt => (
-                                <button key={opt.id} onClick={() => onSelect(opt.id)} className="p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-center">
-                                    <Icon name={opt.icon} size={24} className="mx-auto mb-2 text-indigo-400" />
-                                    <span className="text-xs">{opt.label}</span>
-                                    {opt.premium && <Icon name="Lock" size={12} className="mx-auto mt-1 text-pink-400" />}
+                        <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-[60vh] overflow-y-auto">
+                            {options.map((option) => (
+                                <button
+                                    key={option.id}
+                                    onClick={() => onSelect(option.id)}
+                                    className="p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-indigo-500/50 transition-all group text-left"
+                                >
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center group-hover:bg-indigo-500/30 transition-colors">
+                                            <Icon name={option.icon} size={20} className="text-indigo-400" />
+                                        </div>
+                                        {option.premium && <Icon name="Lock" size={12} className="text-pink-400" />}
+                                    </div>
+                                    <p className="font-medium text-sm mb-1">{option.label}</p>
+                                    <p className="text-xs text-gray-500">{option.desc}</p>
                                 </button>
                             ))}
                         </div>
@@ -335,173 +1045,1422 @@
 
         // Voice Recorder Modal
         const VoiceRecorder = ({ isOpen, onClose, onSend }) => {
-            const [recording, setRecording] = useState(false);
+            const [isRecording, setIsRecording] = useState(false);
             const [duration, setDuration] = useState(0);
-            useEffect(() => { let i; if (recording) i = setInterval(() => setDuration(d => d + 1), 1000); return () => clearInterval(i); }, [recording]);
-            if (!isOpen) return null;
-            return (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-                    <div className="glass-strong rounded-3xl p-8 text-center space-y-6">
-                        <button onClick={() => setRecording(!recording)} className={`w-24 h-24 rounded-full flex items-center justify-center ${recording ? 'bg-red-500 animate-pulse' : 'bg-indigo-500'}`}>
-                            <Icon name={recording ? "Square" : "Mic"} size={32} className="text-white" />
-                        </button>
-                        <p className="text-2xl font-mono">{Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')}</p>
-                        <div className="flex gap-3">
-                            <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                            <Button onClick={() => { onSend(); onClose(); }} disabled={!recording}>Send</Button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // Premium Upgrade Page
-        const UpgradePage = ({ onUpgrade }) => (
-            <div className="flex-1 overflow-y-auto p-6">
-                <div className="max-w-4xl mx-auto text-center">
-                    <h1 className="text-4xl font-bold mb-4">Unlock Axion Plus</h1>
-                    <div className="grid md:grid-cols-2 gap-8 mt-8">
-                        <div className="glass rounded-3xl p-8">
-                            <h3 className="text-xl font-semibold mb-2">Free</h3>
-                            <p className="text-3xl font-bold mb-6">$0<span className="text-lg text-gray-500">/mo</span></p>
-                            <ul className="text-left space-y-2 text-gray-400 mb-8 text-sm">
-                                <li>• 25 messages/day</li>
-                                <li>• 4 images/day</li>
-                                <li>• 3 videos/day</li>
-                                <li>• 1080p quality</li>
-                            </ul>
-                            <Button variant="secondary" className="w-full" disabled>Current</Button>
-                        </div>
-                        <div className="glass rounded-3xl p-8 border-2 border-pink-500/50 relative">
-                            <div className="absolute top-0 right-0 bg-pink-500 text-white text-xs font-bold px-4 py-1 rounded-bl-xl">BEST</div>
-                            <h3 className="text-xl font-semibold mb-2 text-pink-400">Plus</h3>
-                            <p className="text-3xl font-bold mb-6">$10.99<span className="text-lg text-gray-500">/mo</span></p>
-                            <ul className="text-left space-y-2 mb-8 text-sm">
-                                <li>• Unlimited everything</li>
-                                <li>• 4K video quality</li>
-                                <li>• Voice cloning</li>
-                                <li>• Custom accents</li>
-                                <li>• Priority support</li>
-                            </ul>
-                            <Button variant="premium" onClick={onUpgrade} className="w-full">Upgrade Now</Button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-
-        // Settings Page
-        const SettingsPage = ({ user, onUpdate, onLogout }) => {
-            const [section, setSection] = useState('profile');
-            return (
-                <div className="flex-1 flex flex-col h-full">
-                    <div className="h-16 border-b border-white/10 flex items-center px-6"><h2 className="text-xl font-bold">Settings</h2></div>
-                    <div className="flex-1 flex overflow-hidden">
-                        <div className="w-64 border-r border-white/10 hidden sm:block">
-                            {['profile', 'appearance', 'privacy'].map(s => (
-                                <button key={s} onClick={() => setSection(s)} className={`w-full text-left px-6 py-4 capitalize ${section === s ? 'bg-white/10 border-r-2 border-indigo-500' : 'text-gray-400 hover:bg-white/5'}`}>{s}</button>
-                            ))}
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-6">
-                            {section === 'profile' && (
-                                <div className="max-w-md space-y-6">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-2xl font-bold">{user?.name?.[0]}</div>
-                                        <Button variant="secondary" size="sm">Change Photo</Button>
-                                    </div>
-                                    <Input placeholder="Name" value={user?.name} onChange={(e) => onUpdate({...user, name: e.target.value})} />
-                                    <Input placeholder="Email" value={user?.email} />
-                                    <Button onClick={() => onUpdate(user)}>Save Changes</Button>
-                                    <button onClick={onLogout} className="w-full text-left p-3 text-red-400 hover:bg-red-500/10 rounded-xl flex items-center gap-2">
-                                        <Icon name="LogOut" size={18} /> Log Out
-                                    </button>
-                                </div>
-                            )}
-                            {section === 'appearance' && (
-                                <div className="max-w-md space-y-6">
-                                    <h3 className="font-semibold">Theme</h3>
-                                    <div className="flex gap-3">
-                                        <div className="flex-1 p-4 rounded-xl bg-white/10 border-2 border-indigo-500 text-center"><Icon name="Moon" size={24} className="mx-auto mb-2" /> Dark</div>
-                                        <div className="flex-1 p-4 rounded-xl bg-white/5 border-2 border-white/10 text-center opacity-50"><Icon name="Sun" size={24} className="mx-auto mb-2" /> Light</div>
-                                    </div>
-                                </div>
-                            )}
-                            {section === 'privacy' && (
-                                <div className="max-w-md space-y-4">
-                                    <div className="flex items-center justify-between p-4 glass rounded-xl">
-                                        <div><p className="font-medium">Parental Controls</p><p className="text-sm text-gray-400">Filter sensitive content</p></div>
-                                        <div className="w-12 h-6 bg-indigo-500 rounded-full relative"><div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full" /></div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // Main Application Component
-        const App = () => {
-            const [user, setUser] = useState(null);
-            const [view, setView] = useState('chat');
-            const [sidebarOpen, setSidebarOpen] = useState(false);
-            const [messages, setMessages] = useState([]);
-            const [input, setInput] = useState('');
-            const [typing, setTyping] = useState(false);
-            const [isPrivate, setIsPrivate] = useState(false);
-            const [attachOpen, setAttachOpen] = useState(false);
-            const [voiceOpen, setVoiceOpen] = useState(false);
-            const [chats, setChats] = useState([]);
+            const [audioBlob, setAudioBlob] = useState(null);
 
             useEffect(() => {
-                const saved = localStorage.getItem('axion_user');
-                if (saved) setUser(JSON.parse(saved));
+                let interval;
+                if (isRecording) {
+                    interval = setInterval(() => setDuration(d => d + 1), 1000);
+                }
+                return () => clearInterval(interval);
+            }, [isRecording]);
+
+            const startRecording = async () => {
+                try {
+                    // Placeholder for actual recording logic
+                    setIsRecording(true);
+                    setDuration(0);
+                } catch (err) {
+                    console.error('Recording failed:', err);
+                }
+            };
+
+            const stopRecording = () => {
+                setIsRecording(false);
+                setAudioBlob(new Blob()); // Placeholder
+            };
+
+            const formatTime = (seconds) => {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            };
+
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div className="glass-strong rounded-3xl p-8 max-w-sm w-full mx-4 text-center space-y-6">
+                        <div className="relative w-24 h-24 mx-auto">
+                            {isRecording && (
+                                <div className="absolute inset-0 rounded-full border-4 border-red-500 pulse-ring" />
+                            )}
+                            <button
+                                onClick={isRecording ? stopRecording : startRecording}
+                                className={`w-full h-full rounded-full flex items-center justify-center transition-all ${
+                                    isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-indigo-500 hover:bg-indigo-600'
+                                }`}
+                            >
+                                <Icon name={isRecording ? "Square" : "Mic"} size={32} className="text-white" />
+                            </button>
+                        </div>
+
+                        <div>
+                            <h3 className="text-xl font-bold mb-1">
+                                {isRecording ? 'Recording...' : audioBlob ? 'Recording Complete' : 'Tap to Record'}
+                            </h3>
+                            <p className="text-3xl font-mono text-gray-400">{formatTime(duration)}</p>
+                        </div>
+
+                        {audioBlob && (
+                            <div className="flex gap-3">
+                                <Button variant="secondary" onClick={() => { setAudioBlob(null); setDuration(0); }} className="flex-1">
+                                    Retake
+                                </Button>
+                                <Button onClick={() => { onSend(audioBlob); onClose(); }} className="flex-1">
+                                    Send
+                                </Button>
+                            </div>
+                        )}
+
+                        <button onClick={onClose} className="text-gray-500 hover:text-white text-sm">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        // Call Interface
+        const CallInterface = ({ isOpen, onClose }) => {
+            const [isConnecting, setIsConnecting] = useState(true);
+            const [isMuted, setIsMuted] = useState(false);
+            const [callDuration, setCallDuration] = useState(0);
+
+            useEffect(() => {
+                if (isOpen) {
+                    setTimeout(() => setIsConnecting(false), 2000);
+                    const interval = setInterval(() => setCallDuration(d => d + 1), 1000);
+                    return () => clearInterval(interval);
+                }
+            }, [isOpen]);
+
+            const formatTime = (seconds) => {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            };
+
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 z-50 bg-black flex flex-col">
+                    <div className="flex-1 flex flex-col items-center justify-center space-y-8 p-6">
+                        <div className="relative">
+                            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                                <Icon name="Bot" size={48} className="text-white" />
+                            </div>
+                            {isConnecting && (
+                                <div className="absolute inset-0 rounded-full border-4 border-indigo-500 animate-ping" />
+                            )}
+                        </div>
+
+                        <div className="text-center">
+                            <h2 className="text-2xl font-bold mb-2">Axion AI</h2>
+                            <p className="text-gray-400">
+                                {isConnecting ? 'Connecting...' : formatTime(callDuration)}
+                            </p>
+                        </div>
+
+                        {!isConnecting && (
+                            <div className="w-full max-w-md glass rounded-2xl p-4">
+                                <p className="text-center text-gray-400">"How can I help you today?"</p>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="p-8 flex justify-center gap-6">
+                        <button 
+                            onClick={() => setIsMuted(!isMuted)}
+                            className={`w-16 h-16 rounded-full flex items-center justify-center ${isMuted ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-white'}`}
+                        >
+                            <Icon name={isMuted ? "MicOff" : "Mic"} size={24} />
+                        </button>
+                        
+                        <button 
+                            onClick={onClose}
+                            className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center hover:bg-red-600 transition-colors"
+                        >
+                            <Icon name="PhoneOff" size={24} className="text-white" />
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        // Image Generation Page
+        const ImageGeneration = ({ user, onNotify }) => {
+            const [prompt, setPrompt] = useState('');
+            const [isGenerating, setIsGenerating] = useState(false);
+            const [generatedImages, setGeneratedImages] = useState([]);
+            const [style, setStyle] = useState('realistic');
+
+            const styles = ['realistic', 'anime', 'digital art', 'oil painting', '3d render', 'sketch'];
+
+            const handleGenerate = async () => {
+                if (!prompt) return;
+                
+                const limit = user?.isPremium ? Infinity : 4;
+                const usedToday = generatedImages.filter(img => {
+                    const today = new Date().toDateString();
+                    return new Date(img.createdAt).toDateString() === today;
+                }).length;
+
+                if (!user?.isPremium && usedToday >= limit) {
+                    onNotify('Daily image limit reached. Upgrade to Plus for unlimited generation.', 'warning');
+                    return;
+                }
+
+                if (!user?.isPremium && prompt.length > 1000) {
+                    onNotify('Character limit exceeded for free users. Upgrade for unlimited length.', 'warning');
+                    return;
+                }
+
+                setIsGenerating(true);
+                
+                // Simulate API call
+                setTimeout(() => {
+                    const newImage = {
+                        id: Date.now(),
+                        url: `https://picsum.photos/seed/${Date.now()}/512/512`,
+                        prompt,
+                        style,
+                        createdAt: new Date().toISOString()
+                    };
+                    setGeneratedImages([newImage, ...generatedImages]);
+                    setIsGenerating(false);
+                    onNotify('Your image is ready to review!', 'success');
+                    setPrompt('');
+                }, 3000);
+            };
+
+            return (
+                <div className="flex-1 flex flex-col h-full">
+                    <div className="h-16 border-b border-white/10 flex items-center px-6 glass">
+                        <h2 className="text-xl font-bold flex items-center gap-2">
+                            <Icon name="Image" size={24} className="text-indigo-400" />
+                            AI Image Generation
+                        </h2>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-6">
+                        <div className="max-w-4xl mx-auto space-y-6">
+                            <div className="glass rounded-2xl p-6 space-y-4">
+                                <textarea
+                                    value={prompt}
+                                    onChange={(e) => setPrompt(e.target.value)}
+                                    placeholder="Describe the image you want to create..."
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white placeholder-gray-500 outline-none focus:border-indigo-500 resize-none h-32"
+                                    maxLength={user?.isPremium ? undefined : 1000}
+                                />
+                                
+                                <div className="flex flex-wrap gap-2">
+                                    {styles.map((s) => (
+                                        <button
+                                            key={s}
+                                            onClick={() => setStyle(s)}
+                                            className={`px-4 py-2 rounded-full text-sm capitalize transition-colors ${
+                                                style === s 
+                                                    ? 'bg-indigo-500 text-white' 
+                                                    : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                                            }`}
+                                        >
+                                            {s}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                    <p className="text-sm text-gray-500">
+                                        {user?.isPremium ? 'Unlimited generations' : `${4 - generatedImages.filter(img => new Date(img.createdAt).toDateString() === new Date().toDateString()).length} remaining today`}
+                                    </p>
+                                    <Button onClick={handleGenerate} disabled={isGenerating || !prompt}>
+                                        {isGenerating ? (
+                                            <>
+                                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                Generating...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Icon name="Sparkles" size={18} />
+                                                Generate
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {generatedImages.length > 0 && (
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                    {generatedImages.map((img) => (
+                                        <div key={img.id} className="aspect-square rounded-2xl overflow-hidden bg-white/5 border border-white/10 group relative">
+                                            <img src={img.url} alt={img.prompt} className="w-full h-full object-cover" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-4 flex flex-col justify-end">
+                                                <p className="text-sm line-clamp-2">{img.prompt}</p>
+                                                <div className="flex gap-2 mt-2">
+                                                    <button className="p-2 bg-white/20 rounded-lg hover:bg-white/30">
+                                                        <Icon name="Download" size={16} />
+                                                    </button>
+                                                    <button className="p-2 bg-white/20 rounded-lg hover:bg-white/30">
+                                                        <Icon name="Share2" size={16} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Video Generation Page
+        const VideoGeneration = ({ user, onNotify }) => {
+            const [prompt, setPrompt] = useState('');
+            const [image, setImage] = useState(null);
+            const [isGenerating, setIsGenerating] = useState(false);
+            const [videos, setVideos] = useState([]);
+
+            const handleGenerate = async () => {
+                if (!prompt) return;
+
+                const limit = user?.isPremium ? Infinity : 3;
+                const usedToday = videos.filter(v => new Date(v.createdAt).toDateString() === new Date().toDateString()).length;
+
+                if (!user?.isPremium && usedToday >= limit) {
+                    onNotify('Daily video limit reached. Upgrade to Plus for unlimited 4K generation.', 'warning');
+                    return;
+                }
+
+                if (!user?.isPremium && prompt.length > 300) {
+                    onNotify('Description too long for free users. Upgrade for unlimited length.', 'warning');
+                    return;
+                }
+
+                setIsGenerating(true);
+                
+                setTimeout(() => {
+                    const newVideo = {
+                        id: Date.now(),
+                        thumbnail: `https://picsum.photos/seed/${Date.now()}/640/360`,
+                        prompt,
+                        duration: '0:15',
+                        quality: user?.isPremium ? '4K' : '1080p',
+                        createdAt: new Date().toISOString()
+                    };
+                    setVideos([newVideo, ...videos]);
+                    setIsGenerating(false);
+                    onNotify('Your video is ready to review!', 'success');
+                }, 5000);
+            };
+
+            return (
+                <div className="flex-1 flex flex-col h-full">
+                    <div className="h-16 border-b border-white/10 flex items-center px-6 glass">
+                        <h2 className="text-xl font-bold flex items-center gap-2">
+                            <Icon name="Video" size={24} className="text-indigo-400" />
+                            AI Video Generation
+                        </h2>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-6">
+                        <div className="max-w-4xl mx-auto space-y-6">
+                            <div className="glass rounded-2xl p-6 space-y-4">
+                                {image && (
+                                    <div className="relative w-full h-48 rounded-xl overflow-hidden bg-white/5">
+                                        <img src={image} alt="Preview" className="w-full h-full object-cover" />
+                                        <button 
+                                            onClick={() => setImage(null)}
+                                            className="absolute top-2 right-2 p-2 bg-black/50 rounded-full hover:bg-black/70"
+                                        >
+                                            <Icon name="X" size={16} />
+                                        </button>
+                                    </div>
+                                )}
+                                
+                                <div className="flex gap-2">
+                                    <button className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm flex items-center gap-2">
+                                        <Icon name="ImagePlus" size={16} />
+                                        Add Image (Optional)
+                                    </button>
+                                </div>
+
+                                <textarea
+                                    value={prompt}
+                                    onChange={(e) => setPrompt(e.target.value)}
+                                    placeholder="Describe the video you want to create..."
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white placeholder-gray-500 outline-none focus:border-indigo-500 resize-none h-32"
+                                    maxLength={user?.isPremium ? undefined : 300}
+                                />
+
+                                <div className="flex items-center justify-between">
+                                    <div className="text-sm text-gray-500">
+                                        <p>{user?.isPremium ? '4K Quality • Unlimited' : '1080p Quality • 3/day limit'}</p>
+                                        <p className="text-xs mt-1">{prompt.length}{!user?.isPremium && '/300'} characters</p>
+                                    </div>
+                                    <Button onClick={handleGenerate} disabled={isGenerating || !prompt}>
+                                        {isGenerating ? 'Generating Video...' : 'Generate Video'}
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="grid gap-4">
+                                {videos.map((video) => (
+                                    <div key={video.id} className="glass rounded-2xl overflow-hidden flex flex-col sm:flex-row">
+                                        <div className="sm:w-48 h-32 sm:h-auto bg-white/5 relative">
+                                            <img src={video.thumbnail} alt="" className="w-full h-full object-cover" />
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
+                                                    <Icon name="Play" size={20} className="text-white ml-1" />
+                                                </div>
+                                            </div>
+                                            <span className="absolute bottom-2 right-2 px-2 py-1 bg-black/70 rounded text-xs">{video.duration}</span>
+                                        </div>
+                                        <div className="p-4 flex-1 flex flex-col justify-between">
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="px-2 py-1 bg-indigo-500/20 text-indigo-400 rounded text-xs">{video.quality}</span>
+                                                </div>
+                                                <p className="text-sm text-gray-400 line-clamp-2">{video.prompt}</p>
+                                            </div>
+                                            <div className="flex gap-2 mt-4">
+                                                <button className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm flex items-center gap-2">
+                                                    <Icon name="Download" size={16} />
+                                                    Download
+                                                </button>
+                                                <button className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm flex items-center gap-2">
+                                                    <Icon name="Share2" size={16} />
+                                                    Share
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Audio Studio Page
+        const AudioStudio = ({ user, onNotify }) => {
+            const [activeTab, setActiveTab] = useState('voice-clone');
+            const [isProcessing, setIsProcessing] = useState(false);
+
+            const tabs = [
+                { id: 'voice-clone', label: 'Voice Clone', icon: 'User' },
+                { id: 'text-to-speech', label: 'Text to Audio', icon: 'Type' },
+                { id: 'speech-to-text', label: 'Audio to Text', icon: 'Mic' },
+                { id: 'separation', label: 'Voice Separation', icon: 'Split' },
+            ];
+
+            const handleProcess = () => {
+                setIsProcessing(true);
+                setTimeout(() => {
+                    setIsProcessing(false);
+                    onNotify('Audio processing complete!', 'success');
+                }, 3000);
+            };
+
+            return (
+                <div className="flex-1 flex flex-col h-full">
+                    <div className="h-16 border-b border-white/10 flex items-center px-6 glass">
+                        <h2 className="text-xl font-bold flex items-center gap-2">
+                            <Icon name="Headphones" size={24} className="text-indigo-400" />
+                            Audio Studio
+                        </h2>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto">
+                        <div className="flex border-b border-white/10 overflow-x-auto scrollbar-hide">
+                            {tabs.map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`px-6 py-4 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
+                                        activeTab === tab.id 
+                                            ? 'border-indigo-500 text-white' 
+                                            : 'border-transparent text-gray-400 hover:text-white'
+                                    }`}
+                                >
+                                    <Icon name={tab.icon} size={18} />
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="p-6 max-w-4xl mx-auto">
+                            {activeTab === 'voice-clone' && (
+                                <div className="glass rounded-2xl p-6 space-y-6">
+                                    <div className="text-center space-y-2">
+                                        <div className="w-20 h-20 mx-auto rounded-full bg-indigo-500/20 flex items-center justify-center">
+                                            <Icon name="Mic" size={32} className="text-indigo-400" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold">Clone Your Voice</h3>
+                                        <p className="text-gray-400 text-sm">Record or upload samples to create your voice clone</p>
+                                    </div>
+
+                                    <div className="border-2 border-dashed border-white/10 rounded-2xl p-8 text-center hover:border-indigo-500/50 transition-colors cursor-pointer">
+                                        <Icon name="Upload" size={32} className="mx-auto mb-3 text-gray-400" />
+                                        <p className="text-sm text-gray-400">Drop audio files here or click to browse</p>
+                                        <p className="text-xs text-gray-600 mt-1">MP3, WAV, M4A up to 10MB</p>
+                                    </div>
+
+                                    <Button onClick={handleProcess} disabled={isProcessing} className="w-full">
+                                        {isProcessing ? 'Processing...' : 'Start Voice Cloning'}
+                                    </Button>
+                                </div>
+                            )}
+
+                            {activeTab === 'text-to-speech' && (
+                                <div className="glass rounded-2xl p-6 space-y-4">
+                                    <textarea
+                                        placeholder="Enter text to convert to speech..."
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white placeholder-gray-500 outline-none focus:border-indigo-500 resize-none h-40"
+                                    />
+                                    <div className="flex gap-4">
+                                        <select className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white outline-none">
+                                            <option>Select Voice</option>
+                                            <option>Natural Male</option>
+                                            <option>Natural Female</option>
+                                            <option>Narrator</option>
+                                        </select>
+                                        <Button onClick={handleProcess} disabled={isProcessing}>
+                                            {isProcessing ? 'Converting...' : 'Convert to Speech'}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'speech-to-text' && (
+                                <div className="glass rounded-2xl p-6 space-y-4">
+                                    <div className="border-2 border-dashed border-white/10 rounded-2xl p-8 text-center">
+                                        <Icon name="FileAudio" size={32} className="mx-auto mb-3 text-gray-400" />
+                                        <p className="text-sm text-gray-400">Upload audio to transcribe</p>
+                                    </div>
+                                    <Button onClick={handleProcess} disabled={isProcessing} className="w-full">
+                                        Transcribe Audio
+                                    </Button>
+                                </div>
+                            )}
+
+                            {activeTab === 'separation' && (
+                                <div className="glass rounded-2xl p-6 space-y-4">
+                                    <p className="text-sm text-gray-400">Separate vocals and instruments from audio</p>
+                                    <div className="border-2 border-dashed border-white/10 rounded-2xl p-8 text-center">
+                                        <Icon name="Music" size={32} className="mx-auto mb-3 text-gray-400" />
+                                        <p className="text-sm text-gray-400">Upload mixed audio file</p>
+                                    </div>
+                                    <Button onClick={handleProcess} disabled={isProcessing} className="w-full">
+                                        Separate Tracks
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Novel Writing Page
+        const NovelWriting = ({ onNotify }) => {
+            const [step, setStep] = useState('outline'); // outline, writing, complete
+            const [outline, setOutline] = useState('');
+            const [genre, setGenre] = useState('fiction');
+            const [chapters, setChapters] = useState([]);
+            const [currentChapter, setCurrentChapter] = useState(0);
+            const [isWriting, setIsWriting] = useState(false);
+
+            const genres = ['Fiction', 'Mystery', 'Romance', 'Sci-Fi', 'Fantasy', 'Horror', 'Drama'];
+
+            const startWriting = () => {
+                setIsWriting(true);
+                // Simulate chapter generation
+                let chapterNum = 1;
+                const interval = setInterval(() => {
+                    if (chapterNum > 3) {
+                        clearInterval(interval);
+                        setIsWriting(false);
+                        setStep('complete');
+                        onNotify('Your novel is complete!', 'success');
+                        return;
+                    }
+                    setChapters(prev => [...prev, {
+                        id: chapterNum,
+                        title: `Chapter ${chapterNum}`,
+                        content: `Generated content for chapter ${chapterNum} based on: ${outline}...`
+                    }]);
+                    setCurrentChapter(chapterNum);
+                    chapterNum++;
+                }, 2000);
+            };
+
+            return (
+                <div className="flex-1 flex flex-col h-full">
+                    <div className="h-16 border-b border-white/10 flex items-center px-6 glass">
+                        <h2 className="text-xl font-bold flex items-center gap-2">
+                            <Icon name="BookOpen" size={24} className="text-indigo-400" />
+                            Novel Writing
+                        </h2>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-6">
+                        <div className="max-w-4xl mx-auto">
+                            {step === 'outline' && (
+                                <div className="glass rounded-2xl p-6 space-y-6">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium mb-2">Genre</label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {genres.map((g) => (
+                                                    <button
+                                                        key={g}
+                                                        onClick={() => setGenre(g.toLowerCase())}
+                                                        className={`px-4 py-2 rounded-full text-sm transition-colors ${
+                                                            genre === g.toLowerCase()
+                                                                ? 'bg-indigo-500 text-white'
+                                                                : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                                                        }`}
+                                                    >
+                                                        {g}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium mb-2">Story Outline</label>
+                                            <textarea
+                                                value={outline}
+                                                onChange={(e) => setOutline(e.target.value)}
+                                                placeholder="Describe your story idea, main characters, plot points..."
+                                                className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white placeholder-gray-500 outline-none focus:border-indigo-500 resize-none h-48"
+                                            />
+                                        </div>
+
+                                        <div className="flex gap-3">
+                                            <Button variant="secondary" className="flex-1">
+                                                Drama Mode
+                                            </Button>
+                                            <Button onClick={startWriting} disabled={!outline} className="flex-1">
+                                                Start Writing
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {(step === 'writing' || step === 'complete') && (
+                                <div className="space-y-6">
+                                    <div className="glass rounded-2xl p-4 flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-16 bg-indigo-500/20 rounded flex items-center justify-center">
+                                                <Icon name="Book" size={24} className="text-indigo-400" />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-semibold">Untitled Novel</h3>
+                                                <p className="text-sm text-gray-400 capitalize">{genre} • {chapters.length} Chapters</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button variant="secondary" onClick={() => setStep('outline')}>
+                                                <Icon name="Edit" size={16} />
+                                                Edit Outline
+                                            </Button>
+                                            <Button>
+                                                <Icon name="Download" size={16} />
+                                                Export
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {isWriting && (
+                                        <div className="glass rounded-2xl p-8 text-center">
+                                            <div className="w-16 h-16 mx-auto mb-4 relative">
+                                                <div className="absolute inset-0 border-4 border-indigo-500/30 rounded-full" />
+                                                <div className="absolute inset-0 border-4 border-indigo-500 rounded-full border-t-transparent animate-spin" />
+                                                <Icon name="PenTool" size={24} className="absolute inset-0 m-auto text-indigo-400" />
+                                            </div>
+                                            <p className="text-lg font-medium">Writing Chapter {currentChapter + 1}...</p>
+                                            <p className="text-gray-400 text-sm mt-1">AI is crafting your story</p>
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-4">
+                                        {chapters.map((chapter, idx) => (
+                                            <div key={chapter.id} className="glass rounded-2xl p-6">
+                                                <h4 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                                                    <span className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-sm text-indigo-400">
+                                                        {chapter.id}
+                                                    </span>
+                                                    {chapter.title}
+                                                </h4>
+                                                <p className="text-gray-300 leading-relaxed">{chapter.content}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Tasks Page
+        const TasksPage = ({ user, isAdmin }) => {
+            const [tasks, setTasks] = useState([
+                { id: 1, title: 'Daily Login', description: 'Log in to Axion AI', points: 10, completed: true, type: 'daily' },
+                { id: 2, title: 'Send 5 Messages', description: 'Chat with Axion', points: 20, completed: false, type: 'daily', progress: 3, total: 5 },
+                { id: 3, title: 'Create an Image', description: 'Use AI Image Generation', points: 50, completed: false, type: 'weekly' },
+                { id: 4, title: 'Invite a Friend', description: 'Share your referral code', points: 100, completed: false, type: 'once' },
+            ]);
+
+            const [newTask, setNewTask] = useState({ title: '', description: '', points: 10, type: 'daily' });
+            const [showAdminPanel, setShowAdminPanel] = useState(false);
+
+            const totalPoints = tasks.filter(t => t.completed).reduce((sum, t) => sum + t.points, 0);
+
+            if (isAdmin && showAdminPanel) {
+                return (
+                    <div className="flex-1 flex flex-col h-full">
+                        <div className="h-16 border-b border-white/10 flex items-center justify-between px-6 glass">
+                            <h2 className="text-xl font-bold flex items-center gap-2">
+                                <Icon name="Shield" size={24} className="text-indigo-400" />
+                                Admin: Task Management
+                            </h2>
+                            <Button variant="secondary" onClick={() => setShowAdminPanel(false)}>
+                                View as User
+                            </Button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <div className="max-w-2xl mx-auto space-y-6">
+                                <div className="glass rounded-2xl p-6 space-y-4">
+                                    <h3 className="font-semibold text-lg">Create New Task</h3>
+                                    <Input
+                                        placeholder="Task Title"
+                                        value={newTask.title}
+                                        onChange={(e) => setNewTask({...newTask, title: e.target.value})}
+                                    />
+                                    <Input
+                                        placeholder="Description"
+                                        value={newTask.description}
+                                        onChange={(e) => setNewTask({...newTask, description: e.target.value})}
+                                    />
+                                    <div className="flex gap-4">
+                                        <Input
+                                            type="number"
+                                            placeholder="Points"
+                                            value={newTask.points}
+                                            onChange={(e) => setNewTask({...newTask, points: parseInt(e.target.value) || 0})}
+                                        />
+                                        <select 
+                                            value={newTask.type}
+                                            onChange={(e) => setNewTask({...newTask, type: e.target.value})}
+                                            className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 text-white outline-none"
+                                        >
+                                            <option value="daily">Daily</option>
+                                            <option value="weekly">Weekly</option>
+                                            <option value="once">One-time</option>
+                                        </select>
+                                    </div>
+                                    <Button onClick={() => {
+                                        setTasks([...tasks, { ...newTask, id: Date.now(), completed: false }]);
+                                        setNewTask({ title: '', description: '', points: 10, type: 'daily' });
+                                    }} className="w-full">
+                                        Add Task
+                                    </Button>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <h3 className="font-semibold">Current Tasks</h3>
+                                    {tasks.map(task => (
+                                        <div key={task.id} className="glass rounded-xl p-4 flex items-center justify-between">
+                                            <div>
+                                                <p className="font-medium">{task.title}</p>
+                                                <p className="text-sm text-gray-400">{task.description} • {task.points} pts</p>
+                                            </div>
+                                            <button 
+                                                onClick={() => setTasks(tasks.filter(t => t.id !== task.id))}
+                                                className="p-2 hover:bg-red-500/20 text-red-400 rounded-lg"
+                                            >
+                                                <Icon name="Trash2" size={18} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="flex-1 flex flex-col h-full">
+                    <div className="h-16 border-b border-white/10 flex items-center justify-between px-6 glass">
+                        <h2 className="text-xl font-bold flex items-center gap-2">
+                            <Icon name="CheckSquare" size={24} className="text-indigo-400" />
+                            Tasks & Rewards
+                        </h2>
+                        {isAdmin && (
+                            <Button variant="secondary" onClick={() => setShowAdminPanel(true)}>
+                                <Icon name="Shield" size={16} />
+                                Admin
+                            </Button>
+                        )}
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-6">
+                        <div className="max-w-2xl mx-auto space-y-6">
+                            <div className="glass rounded-2xl p-6 text-center">
+                                <p className="text-gray-400 text-sm mb-1">Your Points</p>
+                                <p className="text-4xl font-bold gradient-text">{totalPoints}</p>
+                                <p className="text-sm text-gray-500 mt-2">Complete tasks to earn rewards</p>
+                            </div>
+
+                            <div className="space-y-3">
+                                {tasks.map((task) => (
+                                    <div 
+                                        key={task.id} 
+                                        className={`glass rounded-2xl p-4 flex items-center gap-4 ${task.completed ? 'opacity-50' : ''}`}
+                                    >
+                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                            task.completed ? 'bg-green-500/20 text-green-400' : 'bg-indigo-500/20 text-indigo-400'
+                                        }`}>
+                                            <Icon name={task.completed ? "Check" : "Target"} size={24} />
+                                        </div>
+                                        
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h3 className="font-semibold">{task.title}</h3>
+                                                <span className="px-2 py-0.5 rounded-full bg-white/10 text-xs capitalize">{task.type}</span>
+                                            </div>
+                                            <p className="text-sm text-gray-400">{task.description}</p>
+                                            
+                                            {task.progress !== undefined && !task.completed && (
+                                                <div className="mt-2 h-2 bg-white/10 rounded-full overflow-hidden">
+                                                    <div 
+                                                        className="h-full bg-indigo-500 rounded-full transition-all"
+                                                        style={{ width: `${(task.progress / task.total) * 100}%` }}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="text-right">
+                                            <span className="text-lg font-bold text-indigo-400">+{task.points}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Upgrade Page
+        const UpgradePage = ({ user, onUpgrade }) => {
+            const features = [
+                { text: 'Unlimited messages per day', free: '25 messages/day', icon: 'MessageCircle' },
+                { text: '4K Video generation', free: '1080p only', icon: 'Video' },
+                { text: 'Unlimited image generation', free: '4 images/day', icon: 'Image' },
+                { text: 'Unlimited video generation', free: '3 videos/day', icon: 'Film' },
+                { text: 'Voice cloning access', free: 'Locked', icon: 'Mic' },
+                { text: 'Unlimited description length', free: 'Limited chars', icon: 'AlignLeft' },
+                { text: 'Custom accent colors', free: 'Locked', icon: 'Palette' },
+                { text: 'Priority support', free: 'Standard', icon: 'Zap' },
+            ];
+
+            return (
+                <div className="flex-1 flex flex-col h-full overflow-y-auto">
+                    <div className="h-16 border-b border-white/10 flex items-center px-6 glass sticky top-0">
+                        <h2 className="text-xl font-bold flex items-center gap-2">
+                            <Icon name="Crown" size={24} className="text-pink-400" />
+                            Upgrade to Plus
+                        </h2>
+                    </div>
+
+                    <div className="p-6 max-w-4xl mx-auto w-full">
+                        <div className="text-center mb-12">
+                            <h1 className="text-4xl font-bold mb-4">Unlock the Full Power of Axion</h1>
+                            <p className="text-gray-400 text-lg">Get unlimited access to all AI features</p>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-8 mb-12">
+                            <div className="glass rounded-3xl p-8 border border-white/10">
+                                <h3 className="text-xl font-semibold mb-2">Free</h3>
+                                <p className="text-gray-400 mb-6">Current plan</p>
+                                <div className="text-3xl font-bold mb-6">$0<span className="text-lg text-gray-500">/month</span></div>
+                                <ul className="space-y-3 mb-8">
+                                    {features.map((f, i) => (
+                                        <li key={i} className="flex items-center gap-3 text-gray-400">
+                                            <Icon name="X" size={16} className="text-gray-600" />
+                                            <span className="text-sm">{f.free}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                                <Button variant="secondary" className="w-full" disabled>
+                                    Current Plan
+                                </Button>
+                            </div>
+
+                            <div className="glass rounded-3xl p-8 border-2 border-pink-500/50 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 bg-gradient-to-l from-pink-500 to-rose-500 text-white text-xs font-bold px-4 py-1 rounded-bl-xl">
+                                    RECOMMENDED
+                                </div>
+                                <h3 className="text-xl font-semibold mb-2 text-pink-400">Axion Plus</h3>
+                                <p className="text-gray-400 mb-6">Unlimited everything</p>
+                                <div className="text-3xl font-bold mb-2">$10.99<span className="text-lg text-gray-500">/month</span></div>
+                                <p className="text-sm text-gray-500 mb-6">Cancel anytime</p>
+                                <ul className="space-y-3 mb-8">
+                                    {features.map((f, i) => (
+                                        <li key={i} className="flex items-center gap-3">
+                                            <div className="w-5 h-5 rounded-full bg-pink-500/20 flex items-center justify-center">
+                                                <Icon name="Check" size={12} className="text-pink-400" />
+                                            </div>
+                                            <span className="text-sm">{f.text}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                                <Button variant="premium" onClick={onUpgrade} className="w-full">
+                                    Upgrade Now
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="text-center text-sm text-gray-500">
+                            <p>Secure payment powered by Stripe. 30-day money-back guarantee.</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Settings Page
+        const SettingsPage = ({ user, onUpdateUser, onLogout }) => {
+            const [activeSection, setActiveSection] = useState('personalization');
+            const [settings, setSettings] = useState({
+                name: user?.name || '',
+                email: user?.email || '',
+                theme: 'dark',
+                parentalControl: false,
+                accent: 'indigo',
+                notifications: true,
+            });
+
+            const sections = [
+                { id: 'personalization', label: 'Personalization', icon: 'User' },
+                { id: 'appearance', label: 'Appearance', icon: 'Palette' },
+                { id: 'privacy', label: 'Privacy & Safety', icon: 'Shield' },
+                { id: 'apps', label: 'Apps', icon: 'Grid' },
+                { id: 'about', label: 'About', icon: 'Info' },
+            ];
+
+            const accents = [
+                { id: 'indigo', color: 'bg-indigo-500', name: 'Indigo' },
+                { id: 'rose', color: 'bg-rose-500', name: 'Rose' },
+                { id: 'emerald', color: 'bg-emerald-500', name: 'Emerald' },
+                { id: 'amber', color: 'bg-amber-500', name: 'Amber' },
+                { id: 'cyan', color: 'bg-cyan-500', name: 'Cyan' },
+            ];
+
+            const saveSettings = () => {
+                onUpdateUser({ ...user, ...settings });
+                // Show toast
+            };
+
+            return (
+                <div className="flex-1 flex flex-col h-full">
+                    <div className="h-16 border-b border-white/10 flex items-center px-6 glass">
+                        <h2 className="text-xl font-bold">Settings</h2>
+                    </div>
+
+                    <div className="flex-1 flex overflow-hidden">
+                        <div className="w-64 border-r border-white/10 hidden sm:block overflow-y-auto">
+                            {sections.map((section) => (
+                                <button
+                                    key={section.id}
+                                    onClick={() => setActiveSection(section.id)}
+                                    className={`w-full flex items-center gap-3 px-6 py-4 text-left transition-colors ${
+                                        activeSection === section.id 
+                                            ? 'bg-white/10 text-white border-r-2 border-indigo-500' 
+                                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                    }`}
+                                >
+                                    <Icon name={section.icon} size={20} />
+                                    {section.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <div className="max-w-2xl mx-auto">
+                                {activeSection === 'personalization' && (
+                                    <div className="space-y-6">
+                                        <h3 className="text-lg font-semibold mb-4">Personal Information</h3>
+                                        
+                                        <div className="glass rounded-2xl p-6 space-y-4">
+                                            <div className="flex items-center gap-4 mb-6">
+                                                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-2xl font-bold">
+                                                    {settings.name[0]?.toUpperCase()}
+                                                </div>
+                                                <Button variant="secondary" size="sm">
+                                                    Change Photo
+                                                </Button>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium mb-2">Display Name</label>
+                                                <Input 
+                                                    value={settings.name}
+                                                    onChange={(e) => setSettings({...settings, name: e.target.value})}
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium mb-2">Email</label>
+                                                <Input 
+                                                    value={settings.email}
+                                                    onChange={(e) => setSettings({...settings, email: e.target.value})}
+                                                />
+                                            </div>
+
+                                            <Button onClick={saveSettings}>Save Changes</Button>
+                                        </div>
+
+                                        <div className="glass rounded-2xl p-6">
+                                            <h4 className="font-medium mb-4">Account Actions</h4>
+                                            <div className="space-y-2">
+                                                <button className="w-full text-left p-3 rounded-xl hover:bg-white/5 text-red-400 flex items-center gap-3">
+                                                    <Icon name="Trash2" size={18} />
+                                                    Delete Account
+                                                </button>
+                                                <button 
+                                                    onClick={onLogout}
+                                                    className="w-full text-left p-3 rounded-xl hover:bg-white/5 text-gray-400 flex items-center gap-3"
+                                                >
+                                                    <Icon name="LogOut" size={18} />
+                                                    Log Out
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeSection === 'appearance' && (
+                                    <div className="space-y-6">
+                                        <h3 className="text-lg font-semibold mb-4">Appearance</h3>
+                                        
+                                        <div className="glass rounded-2xl p-6 space-y-6">
+                                            <div>
+                                                <label className="block text-sm font-medium mb-3">Theme</label>
+                                                <div className="flex gap-3">
+                                                    <button 
+                                                        onClick={() => setSettings({...settings, theme: 'dark'})}
+                                                        className={`flex-1 p-4 rounded-xl border-2 transition-all ${
+                                                            settings.theme === 'dark' ? 'border-indigo-500 bg-white/10' : 'border-white/10'
+                                                        }`}
+                                                    >
+                                                        <Icon name="Moon" size={24} className="mx-auto mb-2" />
+                                                        <span className="text-sm">Dark</span>
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => setSettings({...settings, theme: 'light'})}
+                                                        className={`flex-1 p-4 rounded-xl border-2 transition-all ${
+                                                            settings.theme === 'light' ? 'border-indigo-500 bg-white/10' : 'border-white/10'
+                                                        }`}
+                                                    >
+                                                        <Icon name="Sun" size={24} className="mx-auto mb-2" />
+                                                        <span className="text-sm">Light</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <label className="block text-sm font-medium">Accent Color</label>
+                                                    {!user?.isPremium && (
+                                                        <span className="text-xs text-pink-400 flex items-center gap-1">
+                                                            <Icon name="Lock" size={12} />
+                                                            Plus only
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-wrap gap-3">
+                                                    {accents.map((accent) => (
+                                                        <button
+                                                            key={accent.id}
+                                                            disabled={!user?.isPremium && accent.id !== 'indigo'}
+                                                            onClick={() => user?.isPremium && setSettings({...settings, accent: accent.id})}
+                                                            className={`w-12 h-12 rounded-full ${accent.color} flex items-center justify-center transition-all ${
+                                                                settings.accent === accent.id ? 'ring-2 ring-white ring-offset-2 ring-offset-black' : 'opacity-50 hover:opacity-100'
+                                                            } ${!user?.isPremium && accent.id !== 'indigo' ? 'cursor-not-allowed' : ''}`}
+                                                        >
+                                                            {settings.accent === accent.id && <Icon name="Check" size={20} className="text-white" />}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeSection === 'privacy' && (
+                                    <div className="space-y-6">
+                                        <h3 className="text-lg font-semibold mb-4">Privacy & Safety</h3>
+                                        
+                                        <div className="glass rounded-2xl p-6 space-y-4">
+                                            <div className="flex items-center justify-between py-3 border-b border-white/10">
+                                                <div>
+                                                    <p className="font-medium">Parental Controls</p>
+                                                    <p className="text-sm text-gray-400">Filter sensitive content in responses</p>
+                                                </div>
+                                                <button 
+                                                    onClick={() => setSettings({...settings, parentalControl: !settings.parentalControl})}
+                                                    className={`w-14 h-8 rounded-full transition-colors relative ${settings.parentalControl ? 'bg-indigo-500' : 'bg-white/20'}`}
+                                                >
+                                                    <div className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-transform ${settings.parentalControl ? 'translate-x-7' : 'translate-x-1'}`} />
+                                                </button>
+                                            </div>
+
+                                            <div className="flex items-center justify-between py-3">
+                                                <div>
+                                                    <p className="font-medium">Chat History</p>
+                                                    <p className="text-sm text-gray-400">Clear all conversation history</p>
+                                                </div>
+                                                <Button variant="secondary" size="sm">
+                                                    Clear History
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeSection === 'apps' && (
+                                    <div className="space-y-6">
+                                        <h3 className="text-lg font-semibold mb-4">Our Apps</h3>
+                                        <div className="glass rounded-2xl p-8 text-center">
+                                            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/5 flex items-center justify-center">
+                                                <Icon name="Smartphone" size={32} className="text-gray-400" />
+                                            </div>
+                                            <h4 className="font-semibold mb-2">More Apps Coming Soon</h4>
+                                            <p className="text-sm text-gray-400">We're working on new experiences for you.</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeSection === 'about' && (
+                                    <div className="space-y-6">
+                                        <h3 className="text-lg font-semibold mb-4">About Axion</h3>
+                                        <div className="glass rounded-2xl p-6 space-y-4">
+                                            <div className="flex items-center gap-4 mb-6">
+                                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                                                    <Icon name="Sparkles" size={32} className="text-white" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-xl">Axion AI</h4>
+                                                    <p className="text-sm text-gray-400">Version 1.0.0</p>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="space-y-2">
+                                                <button className="w-full text-left p-3 rounded-xl hover:bg-white/5 flex items-center justify-between">
+                                                    <span>Terms of Service</span>
+                                                    <Icon name="ExternalLink" size={16} className="text-gray-400" />
+                                                </button>
+                                                <button className="w-full text-left p-3 rounded-xl hover:bg-white/5 flex items-center justify-between">
+                                                    <span>Privacy Policy</span>
+                                                    <Icon name="ExternalLink" size={16} className="text-gray-400" />
+                                                </button>
+                                                <button 
+                                                    onClick={() => window.open('https://wa.me/', '_blank')}
+                                                    className="w-full text-left p-3 rounded-xl hover:bg-white/5 flex items-center justify-between text-red-400"
+                                                >
+                                                    <span>Report a Bug</span>
+                                                    <Icon name="Bug" size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Main App Component
+        const AxionApp = () => {
+            const [user, setUser] = useState(null);
+            const [currentView, setCurrentView] = useState('chat');
+            const [sidebarOpen, setSidebarOpen] = useState(false);
+            const [messages, setMessages] = useState([]);
+            const [inputValue, setInputValue] = useState('');
+            const [isTyping, setIsTyping] = useState(false);
+            const [isPrivate, setIsPrivate] = useState(false);
+            const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+            const [voiceRecorderOpen, setVoiceRecorderOpen] = useState(false);
+            const [callOpen, setCallOpen] = useState(false);
+            const [chats, setChats] = useState([]);
+            const [toast, setToast] = useState(null);
+            const [isOnline, setIsOnline] = useState(navigator.onLine);
+            const [usageLimits, setUsageLimits] = useState({
+                messages: 25,
+                images: 4,
+                videos: 3
+            });
+
+            // Check online status
+            useEffect(() => {
+                const handleOnline = () => setIsOnline(true);
+                const handleOffline = () => setIsOnline(false);
+                
+                window.addEventListener('online', handleOnline);
+                window.addEventListener('offline', handleOffline);
+                
+                return () => {
+                    window.removeEventListener('online', handleOnline);
+                    window.removeEventListener('offline', handleOffline);
+                };
             }, []);
 
-            useEffect(() => { if (user) localStorage.setItem('axion_user', JSON.stringify(user)); }, [user]);
+            // Load user from localStorage
+            useEffect(() => {
+                const savedUser = localStorage.getItem('axion_user');
+                if (savedUser) {
+                    setUser(JSON.parse(savedUser));
+                }
+            }, []);
 
-            const handleSend = (text = input) => {
-                if (!text.trim()) return;
-                setMessages(prev => [...prev, { text, isUser: true, time: new Date().toLocaleTimeString() }]);
-                setInput('');
-                setTyping(true);
+            // Save user to localStorage
+            useEffect(() => {
+                if (user) {
+                    localStorage.setItem('axion_user', JSON.stringify(user));
+                }
+            }, [user]);
+
+            const handleLogin = (userData) => {
+                setUser(userData);
+                showToast('Welcome to Axion AI!', 'success');
+            };
+
+            const showToast = (message, type = 'info') => {
+                setToast({ message, type });
+            };
+
+            const handleSendMessage = async (text = inputValue) => {
+                if (!text.trim() || !isOnline) return;
+                
+                if (!user?.isPremium && usageLimits.messages <= 0) {
+                    showToast('Daily message limit reached. Upgrade to Plus.', 'warning');
+                    return;
+                }
+
+                const newMessage = {
+                    text,
+                    isUser: true,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    id: Date.now()
+                };
+
+                setMessages(prev => [...prev, newMessage]);
+                setInputValue('');
+                setIsTyping(true);
+
+                if (!user?.isPremium) {
+                    setUsageLimits(prev => ({ ...prev, messages: prev.messages - 1 }));
+                }
+
+                // Simulate AI response
                 setTimeout(() => {
-                    setMessages(prev => [...prev, { text: "This is Axion's response to: " + text, isUser: false, time: new Date().toLocaleTimeString() }]);
-                    setTyping(false);
-                }, 1000);
+                    const aiResponse = {
+                        text: `I understand you're asking about "${text}". This is a simulated response. In production, this would connect to your AI backend API.`,
+                        isUser: false,
+                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        id: Date.now() + 1
+                    };
+                    setMessages(prev => [...prev, aiResponse]);
+                    setIsTyping(false);
+                }, 1500);
             };
 
-            const newChat = () => {
-                if (messages.length) setChats(prev => [{ id: Date.now(), title: messages[0].text.slice(0, 30) + '...', date: new Date() }, ...prev]);
+            const handleNewChat = () => {
+                if (messages.length > 0) {
+                    const title = messages[0].text.slice(0, 30) + '...';
+                    setChats(prev => [{ id: Date.now(), title, date: new Date() }, ...prev]);
+                }
                 setMessages([]);
-                setView('chat');
+                setCurrentView('chat');
             };
 
-            if (!user) return <AuthScreen onLogin={setUser} />;
+            const handleAttachSelect = (type) => {
+                setAttachMenuOpen(false);
+                
+                const attachMessages = {
+                    camera: 'Camera functionality would open here',
+                    photo: 'Photo library would open here',
+                    file: 'File picker would open here',
+                    think: 'Deep thinking mode activated',
+                    research: 'Research mode activated',
+                    shopping: 'Shopping research mode activated',
+                    study: 'Study mode activated',
+                    quiz: 'Quiz mode activated'
+                };
+
+                if (attachMessages[type]) {
+                    handleSendMessage(`[${type}] ${attachMessages[type]}`);
+                }
+            };
+
+            const handleVoiceSend = (audioBlob) => {
+                handleSendMessage('[Voice Message] Audio transcription would appear here');
+            };
+
+            const handleUpgrade = () => {
+                // Simulate payment
+                setTimeout(() => {
+                    setUser({ ...user, isPremium: true });
+                    setUsageLimits({ messages: Infinity, images: Infinity, videos: Infinity });
+                    showToast('Welcome to Axion Plus!', 'success');
+                    setCurrentView('chat');
+                }, 1500);
+            };
+
+            if (!user) {
+                return <AuthScreen onLogin={handleLogin} />;
+            }
+
+            if (!isOnline) {
+                return (
+                    <div className="min-h-screen bg-black flex items-center justify-center p-6">
+                        <div className="text-center space-y-4">
+                            <div className="w-20 h-20 mx-auto rounded-full bg-red-500/20 flex items-center justify-center">
+                                <Icon name="WifiOff" size={32} className="text-red-400" />
+                            </div>
+                            <h2 className="text-2xl font-bold">Axion is disconnected</h2>
+                            <p className="text-gray-400">Please check your internet connection and try again.</p>
+                            <Button onClick={() => window.location.reload()} variant="secondary">
+                                Retry Connection
+                            </Button>
+                        </div>
+                    </div>
+                );
+            }
 
             return (
                 <div className="h-screen bg-black flex overflow-hidden">
-                    <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} user={user} onNavigate={setView} currentView={view} onNewChat={newChat} />
+                    {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+                    
+                    <Sidebar 
+                        isOpen={sidebarOpen} 
+                        onClose={() => setSidebarOpen(false)}
+                        user={user}
+                        onNavigate={setCurrentView}
+                        currentView={currentView}
+                        chats={chats}
+                        onNewChat={handleNewChat}
+                        onSelectChat={(chat) => {
+                            handleNewChat();
+                            // Load chat logic here
+                        }}
+                    />
+
                     <div className="flex-1 flex flex-col min-w-0">
-                        {view === 'chat' && <ChatInterface messages={messages} onSendMessage={handleSend} inputValue={input} setInputValue={setInput} isTyping={typing} isPrivate={isPrivate} setIsPrivate={setIsPrivate} user={user} onOpenAttach={() => setAttachOpen(true)} onStartVoice={() => setVoiceOpen(true)} onStartCall={() => alert('Call feature - Add WebRTC API here')} />}
-                        {view === 'upgrade' && <UpgradePage onUpgrade={() => setUser({...user, isPremium: true})} />}
-                        {view === 'settings' && <SettingsPage user={user} onUpdate={setUser} onLogout={() => { localStorage.removeItem('axion_user'); setUser(null); }} />}
-                        {view === 'images' && <div className="flex-1 flex items-center justify-center text-gray-400">Image Generation - Add Stable Diffusion API</div>}
-                        {view === 'video' && <div className="flex-1 flex items-center justify-center text-gray-400">Video Generation - Add Runway API</div>}
-                        {view === 'audio' && <div className="flex-1 flex items-center justify-center text-gray-400">Audio Studio - Add ElevenLabs API</div>}
-                        {view === 'novel' && <div className="flex-1 flex items-center justify-center text-gray-400">Novel Writing - Add GPT-4 API</div>}
-                        {view === 'tasks' && <div className="flex-1 flex items-center justify-center text-gray-400">Tasks System - Connect to backend</div>}
-                        <button onClick={() => setSidebarOpen(true)} className="lg:hidden fixed top-4 left-4 z-30 p-2 glass rounded-xl"><Icon name="Menu" size={20} /></button>
+                        {currentView === 'chat' && (
+                            <ChatInterface
+                                messages={messages}
+                                onSendMessage={handleSendMessage}
+                                inputValue={inputValue}
+                                setInputValue={setInputValue}
+                                isTyping={isTyping}
+                                isPrivate={isPrivate}
+                                setIsPrivate={setIsPrivate}
+                                user={user}
+                                onOpenAttachMenu={() => setAttachMenuOpen(true)}
+                                onStartVoice={() => setVoiceRecorderOpen(true)}
+                                onStartCall={() => setCallOpen(true)}
+                                usageLimits={usageLimits}
+                            />
+                        )}
+
+                        {currentView === 'images' && (
+                            <ImageGeneration user={user} onNotify={showToast} />
+                        )}
+
+                        {currentView === 'video' && (
+                            <VideoGeneration user={user} onNotify={showToast} />
+                        )}
+
+                        {currentView === 'audio' && (
+                            <AudioStudio user={user} onNotify={showToast} />
+                        )}
+
+                        {currentView === 'novel' && (
+                            <NovelWriting onNotify={showToast} />
+                        )}
+
+                        {currentView === 'tasks' && (
+                            <TasksPage user={user} isAdmin={user?.isAdmin} />
+                        )}
+
+                        {currentView === 'upgrade' && (
+                            <UpgradePage user={user} onUpgrade={handleUpgrade} />
+                        )}
+
+                        {currentView === 'settings' && (
+                            <SettingsPage 
+                                user={user} 
+                                onUpdateUser={setUser}
+                                onLogout={() => {
+                                    localStorage.removeItem('axion_user');
+                                    setUser(null);
+                                }}
+                            />
+                        )}
+
+                        {/* Mobile menu button */}
+                        <button 
+                            onClick={() => setSidebarOpen(true)}
+                            className="lg:hidden fixed top-4 left-4 z-30 p-2 glass rounded-xl"
+                        >
+                            <Icon name="Menu" size={20} />
+                        </button>
                     </div>
-                    <AttachMenu isOpen={attachOpen} onClose={() => setAttachOpen(false)} onSelect={(type) => { handleSend(`[${type}] Attachment`); setAttachOpen(false); }} />
-                    <VoiceRecorder isOpen={voiceOpen} onClose={() => setVoiceOpen(false)} onSend={() => handleSend('[Voice Message]')} />
+
+                    <AttachMenu 
+                        isOpen={attachMenuOpen} 
+                        onClose={() => setAttachMenuOpen(false)}
+                        onSelect={handleAttachSelect}
+                    />
+
+                    <VoiceRecorder
+                        isOpen={voiceRecorderOpen}
+                        onClose={() => setVoiceRecorderOpen(false)}
+                        onSend={handleVoiceSend}
+                    />
+
+                    <CallInterface
+                        isOpen={callOpen}
+                        onClose={() => setCallOpen(false)}
+                    />
                 </div>
             );
         };
 
-        // Initialize Application
+        // Initialize Lucide icons
         window.lucide.createIcons();
-        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+        // Render app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<AxionApp />);
     </script>
 </body>
 </html>
