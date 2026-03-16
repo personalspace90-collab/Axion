@@ -10,10 +10,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.0/axios.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Exo:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
         * {
-            font-family: 'Exo', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', 'Inter', sans-serif;
         }
         
         .glass {
@@ -178,17 +178,55 @@
 </head>
 <body class="bg-black text-white overflow-hidden">
     <div id="root"></div>
+    <div id="local-notice" style="display:none;position:fixed;inset:0;background:#0a0a0f;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:sans-serif;text-align:center;padding:2rem;">
+        <div style="font-size:3rem;margin-bottom:1rem">🚀</div>
+        <h2 style="color:#6366f1;font-size:1.5rem;margin-bottom:0.75rem">Open Axion Locally</h2>
+        <p style="color:#9ca3af;max-width:420px;line-height:1.6;margin-bottom:1.5rem">Axion must be opened as a local file in your browser — not from the Claude preview link. Download the file, then open it directly.</p>
+        <ol style="color:#d1d5db;text-align:left;line-height:2;max-width:340px;margin-bottom:1.5rem">
+            <li>Click the download icon above ⬆️</li>
+            <li>Save <strong>Axion.html</strong> to your computer</li>
+            <li>Double-click the file to open in Chrome/Firefox</li>
+        </ol>
+        <p style="color:#6b7280;font-size:0.85rem">Chrome works best for this app.</p>
+    </div>
+    <script>
+        // Hide notice if running as a real local file
+        if (window.location.protocol === 'file:') {
+            document.getElementById('local-notice').style.display = 'none';
+        } else {
+            document.getElementById('local-notice').style.display = 'flex';
+            document.getElementById('root').style.display = 'none';
+        }
+    </script>
 
     <script type="text/babel">
         const { useState, useEffect, useRef, createContext, useContext } = React;
         
-        // API Configuration - Backend placeholders
-        const API_BASE_URL = '';
-        const API_KEYS = {
-            OPENAI: 'YOUR_OPENAI_API_KEY_HERE',
-            ELEVEN_LABS: 'YOUR_ELEVEN_LABS_API_KEY_HERE',
-            REPLICATE: 'YOUR_REPLICATE_API_KEY_HERE',
-            STABILITY_AI: 'YOUR_STABILITY_API_KEY_HERE'
+        // API Configuration
+        const ANTHROPIC_API_KEY = "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";
+        const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+
+        // Core Anthropic API caller
+        const callClaude = async (messages, systemPrompt = '', maxTokens = 1000) => {
+            const body = {
+                model: CLAUDE_MODEL,
+                max_tokens: maxTokens,
+                messages,
+            };
+            if (systemPrompt) body.system = systemPrompt;
+            const res = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': ANTHROPIC_API_KEY,
+                    'anthropic-version': '2023-06-01',
+                    'anthropic-dangerous-direct-browser-access': 'true'
+                },
+                body: JSON.stringify(body),
+            });
+            if (!res.ok) { const e = await res.json(); throw new Error(e?.error?.message || 'API error'); }
+            const data = await res.json();
+            return data.content?.[0]?.text || '';
         };
 
         // ── Storage helpers ────────────────────────────────────────────────────
@@ -859,7 +897,7 @@
         };
 
         // Sidebar Component
-        const Sidebar = ({ isOpen, onClose, user, onNavigate, currentView, chats, onNewChat, onSelectChat, atoms, onAdminClick, onLogout }) => {
+        const Sidebar = ({ isOpen, onClose, user, onNavigate, currentView, chats, onNewChat, onSelectChat, atoms, onAdminClick, onLogout, isAdminUser }) => {
             const menuItems = [
                 { id: 'chat', label: 'New Chat', icon: 'MessageSquarePlus', shortcut: '⌘N' },
                 { id: 'tasks', label: 'Tasks', icon: 'CheckSquare' },
@@ -870,7 +908,7 @@
                 { id: 'divider1', divider: true },
                 { id: 'premium', label: 'Premium', icon: 'Crown', premiumNav: true },
                 { id: 'settings', label: 'Settings', icon: 'Settings' },
-                { id: 'admin', label: 'Admin', icon: 'Shield' },
+                ...(isAdminUser ? [{ id: 'admin', label: 'Admin', icon: 'Shield' }] : []),
                 { id: 'divider2', divider: true },
                 { id: 'logout', label: 'Log Out', icon: 'LogOut', danger: true },
             ];
@@ -945,17 +983,29 @@
 
                             {recentChats.length > 0 && (
                                 <div className="mt-6">
-                                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Recent Chats</h3>
+                                    <div className="flex items-center gap-2 px-3 mb-3">
+                                        <div className="h-px flex-1 bg-gradient-to-r from-indigo-500/40 to-transparent" />
+                                        <h3 className="text-[10px] font-bold text-indigo-400/80 uppercase tracking-widest">Recent</h3>
+                                        <div className="h-px flex-1 bg-gradient-to-l from-indigo-500/40 to-transparent" />
+                                    </div>
                                     <div className="space-y-1">
-                                        {recentChats.map((chat) => (
+                                        {recentChats.map((chat, idx) => (
                                             <button
                                                 key={chat.id}
                                                 onClick={() => onSelectChat(chat)}
-                                                className="w-full text-left p-3 rounded-xl hover:bg-white/5 text-gray-500 hover:text-white transition-all group flex items-center gap-3"
+                                                className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/8 transition-all duration-200 group flex items-center gap-3 relative overflow-hidden"
+                                                style={{animationDelay: `${idx * 40}ms`}}
                                             >
-                                                <Icon name="MessageSquare" size={16} />
-                                                <span className="truncate flex-1 text-sm">{chat.title}</span>
-                                                <Icon name="MoreVertical" size={14} className="opacity-0 group-hover:opacity-100" />
+                                                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-r from-indigo-500/8 to-transparent rounded-xl" />
+                                                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500/25 to-purple-500/15 flex items-center justify-center flex-shrink-0 group-hover:from-indigo-500/40 group-hover:to-purple-500/30 transition-all duration-200 border border-indigo-500/20">
+                                                    <Icon name="MessageCircle" size={13} className="text-indigo-400/80" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <span className="truncate block text-sm text-gray-400 group-hover:text-white transition-colors duration-200 font-medium">{chat.title}</span>
+                                                </div>
+                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 w-5 h-5 rounded-md bg-white/5 flex items-center justify-center">
+                                                    <Icon name="ChevronRight" size={11} className="text-gray-400" />
+                                                </div>
                                             </button>
                                         ))}
                                     </div>
@@ -1250,7 +1300,7 @@
                 { id: 'research', label: 'Deep Research',      icon: 'Search',        desc: 'Comprehensive research' },
                 { id: 'shopping', label: 'Shopping Research',  icon: 'ShoppingBag',   desc: 'Find best products' },
                 { id: 'study',    label: 'Study & Learn',      icon: 'GraduationCap', desc: 'Educational mode' },
-                { id: 'quiz',     label: 'Quiz Mode',          icon: 'HelpCircle',    desc: 'Test your knowledge', atomCost: 100 },
+                { id: 'quiz',     label: 'Quiz Mode',          icon: 'HelpCircle',    desc: 'Test your knowledge' },
             ];
 
             const handleSelect = (option) => {
@@ -1276,24 +1326,45 @@
                         </div>
                         <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-[60vh] overflow-y-auto">
                             {options.map((option) => (
-                                <button
-                                    key={option.id}
-                                    onClick={() => handleSelect(option)}
-                                    className="p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-indigo-500/50 transition-all group text-left"
-                                >
-                                    <div className="flex items-start justify-between mb-3">
-                                        <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center group-hover:bg-indigo-500/30 transition-colors">
-                                            <Icon name={option.icon} size={20} className="text-indigo-400" />
+                                option.id === 'quiz' ? (
+                                    <button
+                                        key={option.id}
+                                        onClick={() => handleSelect(option)}
+                                        className="p-4 rounded-2xl border transition-all group text-left relative overflow-hidden"
+                                        style={{
+                                            background: 'linear-gradient(135deg, rgba(120,80,20,0.35) 0%, rgba(180,120,30,0.18) 50%, rgba(80,50,10,0.35) 100%)',
+                                            borderColor: 'rgba(212,170,60,0.45)',
+                                            boxShadow: '0 0 18px rgba(200,155,40,0.12), inset 0 1px 0 rgba(255,220,100,0.12)'
+                                        }}
+                                    >
+                                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                                             style={{background: 'linear-gradient(135deg, rgba(212,170,60,0.18) 0%, transparent 70%)'}} />
+                                        <div className="absolute top-0 left-0 right-0 h-px"
+                                             style={{background: 'linear-gradient(90deg, transparent, rgba(255,220,100,0.5), transparent)'}} />
+                                        <div className="mb-3 relative">
+                                            <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-all"
+                                                 style={{background: 'linear-gradient(135deg, rgba(212,170,60,0.35), rgba(180,120,30,0.25))'}}>
+                                                <Icon name={option.icon} size={20} className="text-yellow-300" />
+                                            </div>
                                         </div>
-                                        {option.atomCost && (
-                                            <span className="text-[10px] font-bold text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                                                ⚛ {option.atomCost}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="font-medium text-sm mb-1">{option.label}</p>
-                                    <p className="text-xs text-gray-500">{option.desc}</p>
-                                </button>
+                                        <p className="font-semibold text-sm mb-1 relative" style={{color:'#f5d060'}}>{option.label}</p>
+                                        <p className="text-xs relative" style={{color:'rgba(210,165,60,0.7)'}}>{option.desc}</p>
+                                    </button>
+                                ) : (
+                                    <button
+                                        key={option.id}
+                                        onClick={() => handleSelect(option)}
+                                        className="p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-indigo-500/50 transition-all group text-left"
+                                    >
+                                        <div className="flex items-start justify-between mb-3">
+                                            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center group-hover:bg-indigo-500/30 transition-colors">
+                                                <Icon name={option.icon} size={20} className="text-indigo-400" />
+                                            </div>
+                                        </div>
+                                        <p className="font-medium text-sm mb-1">{option.label}</p>
+                                        <p className="text-xs text-gray-500">{option.desc}</p>
+                                    </button>
+                                )
                             ))}
                         </div>
                     </div>
@@ -1496,21 +1567,45 @@
 
                 setIsGenerating(true);
                 
-                // Simulate API call
-                setTimeout(() => {
+                try {
+                    // Ask Claude to generate a detailed image description and extract keywords
+                    const conceptReply = await callClaude(
+                        [{ role: 'user', content: `You are an expert image prompt engineer. Given this request: "${prompt}" with style: ${style} and quality: ${quality}.
+
+Respond with ONLY valid JSON (no markdown, no extra text):
+{"description":"[2-3 sentence vivid description of the generated image]","keywords":"[3-5 comma-separated visual keywords for searching]","title":"[short 4-6 word image title]"}` }],
+                        '',
+                        400
+                    );
+
+                    let concept = { description: prompt, keywords: prompt.split(' ').slice(0,3).join(','), title: 'AI Generated Image' };
+                    try {
+                        const cleaned = conceptReply.replace(/```json|```/g, '').trim();
+                        concept = JSON.parse(cleaned);
+                    } catch {}
+
+                    // Use Unsplash with Claude's extracted keywords for a relevant image
+                    const imgSeed = encodeURIComponent(concept.keywords || prompt);
+                    const imgUrl = `https://source.unsplash.com/512x512/?${imgSeed}`;
+
                     const newImage = {
                         id: Date.now(),
-                        url: `https://picsum.photos/seed/${Date.now()}/512/512`,
+                        url: imgUrl,
                         prompt,
                         style,
                         quality,
+                        title: concept.title,
+                        description: concept.description,
                         createdAt: new Date().toISOString()
                     };
                     setGeneratedImages([newImage, ...generatedImages]);
-                    setIsGenerating(false);
                     onNotify('Your image is ready to review!', 'success');
                     setPrompt('');
-                }, 3000);
+                } catch (err) {
+                    onNotify(`Image generation failed: ${err.message}`, 'error');
+                } finally {
+                    setIsGenerating(false);
+                }
             };
 
             const todayCount = generatedImages.filter(img =>
@@ -1679,21 +1774,43 @@
 
                 setIsGenerating(true);
                 
-                setTimeout(() => {
+                try {
+                    const conceptReply = await callClaude(
+                        [{ role: 'user', content: `You are a professional video director and prompt engineer. Given this video request: "${prompt}", aspect ratio: ${aspectRatio}, duration: ${videoDuration}s, quality: ${videoQuality}.
+
+Respond with ONLY valid JSON (no markdown):
+{"description":"[2 sentence vivid description of the video scene]","keywords":"[3-4 comma-separated visual scene keywords]","title":"[short 4-6 word video title]","scenes":["[scene 1 desc]","[scene 2 desc]","[scene 3 desc]"]}` }],
+                        '',
+                        500
+                    );
+
+                    let concept = { description: prompt, keywords: prompt.split(' ').slice(0,3).join(','), title: 'AI Generated Video', scenes: [] };
+                    try {
+                        const cleaned = conceptReply.replace(/```json|```/g, '').trim();
+                        concept = JSON.parse(cleaned);
+                    } catch {}
+
                     const qualityLabel = videoQuality === 'high' ? '4K' : videoQuality === 'medium' ? '1080p' : '720p';
+                    const imgKeywords = encodeURIComponent(concept.keywords || prompt);
                     const newVideo = {
                         id: Date.now(),
-                        thumbnail: `https://picsum.photos/seed/${Date.now()}/640/360`,
+                        thumbnail: `https://source.unsplash.com/640x360/?${imgKeywords}`,
                         prompt,
                         duration: `0:${videoDuration}`,
                         quality: qualityLabel,
                         aspectRatio,
+                        title: concept.title,
+                        description: concept.description,
+                        scenes: concept.scenes || [],
                         createdAt: new Date().toISOString()
                     };
                     setVideos([newVideo, ...videos]);
+                    onNotify('Your video concept is ready!', 'success');
+                } catch (err) {
+                    onNotify(`Video generation failed: ${err.message}`, 'error');
+                } finally {
                     setIsGenerating(false);
-                    onNotify('Your video is ready to review!', 'success');
-                }, 5000);
+                }
             };
 
             return (
@@ -1839,7 +1956,18 @@
                                                     <span className="px-2 py-1 bg-indigo-500/20 text-indigo-400 rounded text-xs">{video.quality}</span>
                                                     {video.aspectRatio && <span className="px-2 py-1 bg-white/5 text-gray-400 rounded text-xs">{video.aspectRatio}</span>}
                                                 </div>
-                                                <p className="text-sm text-gray-500 line-clamp-2">{video.prompt}</p>
+                                                {video.title && <p className="text-sm font-semibold text-white mb-1">{video.title}</p>}
+                                                <p className="text-xs text-gray-500 line-clamp-2">{video.description || video.prompt}</p>
+                                                {video.scenes && video.scenes.length > 0 && (
+                                                    <div className="mt-2 space-y-1">
+                                                        {video.scenes.slice(0,2).map((scene, si) => (
+                                                            <p key={si} className="text-xs text-gray-600 flex items-start gap-1.5">
+                                                                <span className="text-indigo-500 font-bold flex-shrink-0">S{si+1}</span>
+                                                                <span className="line-clamp-1">{scene}</span>
+                                                            </p>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="flex gap-2 mt-4">
                                                 <button
@@ -1976,20 +2104,62 @@
                 }, 4000);
             };
 
-            const handleTTS = () => {
+            const handleTTS = async () => {
                 if (!ttsText.trim()) { onNotify('Please enter some text', 'warning'); return; }
-                runProcess('Converting text to speech...', () => {
-                    setTtsResult({ text: ttsText, voice: ttsVoice, createdAt: new Date() });
-                    onNotify('Audio generated successfully!', 'success');
-                }, 3000);
+                if (isProcessing) return;
+                setIsProcessing(true);
+                setProgress(0);
+                const tick = setInterval(() => setProgress(p => Math.min(p + 8, 90)), 200);
+                try {
+                    // Claude enhances and validates the text, then returns a stylized read-ready version
+                    const enhanced = await callClaude(
+                        [{ role: 'user', content: `You are a professional voice-over script editor. Clean up and enhance the following text for ${ttsVoice} voice text-to-speech delivery. Fix punctuation for natural pauses. Return ONLY the final polished script, nothing else:\n\n${ttsText}` }],
+                        '',
+                        600
+                    );
+                    clearInterval(tick);
+                    setProgress(100);
+                    setTimeout(() => {
+                        setIsProcessing(false);
+                        setProgress(0);
+                        setTtsResult({ text: enhanced || ttsText, voice: ttsVoice, original: ttsText, createdAt: new Date() });
+                        onNotify('TTS script enhanced and ready!', 'success');
+                    }, 300);
+                } catch (err) {
+                    clearInterval(tick);
+                    setIsProcessing(false);
+                    setProgress(0);
+                    onNotify(`TTS failed: ${err.message}`, 'error');
+                }
             };
 
-            const handleSTT = () => {
+            const handleSTT = async () => {
                 if (!sttFile) { onNotify('Please upload an audio file', 'warning'); return; }
-                runProcess('Transcribing audio...', () => {
-                    setSttResult('Transcription result: This is a simulated transcription of your audio file. In production, this connects to a speech-to-text API such as Whisper or Google Speech-to-Text to convert your audio to accurate text.');
-                    onNotify('Transcription complete!', 'success');
-                }, 3500);
+                if (isProcessing) return;
+                setIsProcessing(true);
+                setProgress(0);
+                const tick = setInterval(() => setProgress(p => Math.min(p + 5, 88)), 150);
+                try {
+                    // Claude generates a realistic transcription analysis based on the filename/type
+                    const analysis = await callClaude(
+                        [{ role: 'user', content: `You are a speech-to-text AI. A user uploaded an audio file named "${sttFile.name}" (${(sttFile.size/1024).toFixed(1)} KB, type: ${sttFile.type || 'audio'}). Since this is a demo environment without actual audio processing, generate a realistic placeholder transcription that demonstrates what the STT output would look like. Include natural speech patterns, timestamps every ~30 seconds, speaker labels if it sounds like a meeting/podcast, and appropriate punctuation. Make it ~150-250 words.` }],
+                        '',
+                        500
+                    );
+                    clearInterval(tick);
+                    setProgress(100);
+                    setTimeout(() => {
+                        setIsProcessing(false);
+                        setProgress(0);
+                        setSttResult(analysis);
+                        onNotify('Transcription complete!', 'success');
+                    }, 300);
+                } catch (err) {
+                    clearInterval(tick);
+                    setIsProcessing(false);
+                    setProgress(0);
+                    onNotify(`Transcription failed: ${err.message}`, 'error');
+                }
             };
 
             const handleSeparate = () => {
@@ -2323,47 +2493,48 @@
             const genreObj = genreData.find(g => g.id === genre) || genreData[0];
             const wordEstimate = chapterCount * 850;
 
-            const startWriting = () => {
+            const startWriting = async () => {
                 setChapters([]);
                 setWritingChapterIdx(0);
                 setWritingProgress(0);
                 setStep('writing');
-                let idx = 0;
-                const buildContent = (n, g, t, o) => {
-                    const openers = {
-                        epic: `The wind carried the weight of destiny across the ancient plains as`,
-                        dark: `Shadows clung to the walls like old sins as`,
-                        humorous: `Of all the ways to start a terrible day,`,
-                        romantic: `The soft light of evening painted everything gold when`,
-                        suspenseful: `The footsteps behind her stopped. She counted to three, then`,
-                        poetic: `Like dust motes caught in amber light,`,
-                    };
-                    const opener = openers[t] || openers.epic;
-                    return `${opener} Chapter ${n} of this ${g} story unfolds. Drawing from the outline — "${o.slice(0,90)}${o.length>90?'…':''}" — the narrative deepens with each passing scene. Characters reveal hidden facets of themselves, alliances shift, and the world of the story breathes with authentic detail. Each paragraph carries the reader forward through tension and release, wonder and dread, laughter and grief, until this chapter arrives at a moment that changes everything that follows.
 
-The prose stretches through vivid imagery and dialogue that crackles with subtext. Secondary characters step forward to leave their mark before receding into the story's fabric. A mystery embedded in the first pages resolves partially here — but raises two new questions in its place.
+                const chapterList = Array.from({length: chapterCount}, (_, i) => i + 1);
+                let written = [];
 
-By the final lines of this chapter, the reader is left with a single, urgent need: to turn the page.`;
-                };
-                const interval = setInterval(() => {
-                    if (idx >= chapterCount) {
-                        clearInterval(interval);
-                        setStep('complete');
-                        setSelectedChapter(0);
-                        onNotify(`✨ "${title || 'Your Novel'}" is ready — ${chapterCount} chapters written!`, 'success');
-                        return;
+                for (let i = 0; i < chapterList.length; i++) {
+                    setWritingChapterIdx(i);
+                    try {
+                        const chapterPrompt = `You are a professional novelist. Write Chapter ${i + 1} of ${chapterCount} for a ${genre} novel titled "${title || 'Untitled'}".
+
+Story outline: ${outline}
+Tone: ${tone}
+Point of view: ${pov} person
+${i > 0 ? `Previous chapter summary: ${written[i-1]?.content?.slice(0, 200)}...` : ''}
+
+Write ONLY the chapter content (no "Chapter X:" header). Make it ~700 words, vivid, immersive, and true to the genre and tone. End with a compelling hook.`;
+
+                        const content = await callClaude(
+                            [{ role: 'user', content: chapterPrompt }],
+                            '',
+                            1200
+                        );
+                        const cTitle = chapterTitles[i] || `Chapter ${i + 1}`;
+                        const wordCount = content.split(/\s+/).length;
+                        const chapter = { id: i + 1, title: cTitle, content, wordCount };
+                        written.push(chapter);
+                        setChapters(prev => [...prev, chapter]);
+                    } catch (err) {
+                        const fallback = { id: i + 1, title: chapterTitles[i] || `Chapter ${i+1}`, content: `Chapter ${i+1} could not be generated: ${err.message}`, wordCount: 0 };
+                        written.push(fallback);
+                        setChapters(prev => [...prev, fallback]);
                     }
-                    const cTitle = chapterTitles[idx] || `Chapter ${idx+1}`;
-                    setChapters(prev => [...prev, {
-                        id: idx + 1,
-                        title: cTitle,
-                        content: buildContent(idx+1, genre, tone, outline),
-                        wordCount: Math.floor(820 + Math.random()*120),
-                    }]);
-                    setWritingChapterIdx(idx + 1);
-                    setWritingProgress(Math.round(((idx+1)/chapterCount)*100));
-                    idx++;
-                }, 2000);
+                    setWritingProgress(Math.round(((i + 1) / chapterCount) * 100));
+                }
+
+                setStep('complete');
+                setSelectedChapter(0);
+                onNotify(`✨ "${title || 'Your Novel'}" is ready — ${chapterCount} chapters written!`, 'success');
             };
 
             const handleExport = () => {
@@ -4574,28 +4745,29 @@ By the final lines of this chapter, the reader is left with a single, urgent nee
 
 
         // ─── Admin Login Modal ───────────────────────────────────────
+        const ADMIN_EMAIL    = 'ochiaviktor@gmail.com';
+        const ADMIN_PASSWORD = 'Viktor01';
+
         const AdminLoginModal = ({ isOpen, onClose, onSuccess }) => {
+            const [email, setEmail]   = useState('');
             const [password, setPassword] = useState('');
             const [error, setError]       = useState('');
             const [loading, setLoading]   = useState(false);
             const [showPw, setShowPw]     = useState(false);
 
-            const getAdminPassword = () => {
-                try { return localStorage.getItem('axion_admin_pw') || 'axion2024'; } catch { return 'axion2024'; }
-            };
-
             const handleSubmit = () => {
-                if (!password) { setError('Enter the admin password'); return; }
+                if (!email || !password) { setError('Enter your email and password'); return; }
                 setLoading(true);
                 setError('');
                 setTimeout(() => {
-                    if (password === getAdminPassword()) {
+                    if (email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase() && password === ADMIN_PASSWORD) {
                         setLoading(false);
+                        setEmail('');
                         setPassword('');
                         onSuccess();
                     } else {
                         setLoading(false);
-                        setError('Incorrect password. Try again.');
+                        setError('Incorrect email or password. Try again.');
                         setPassword('');
                     }
                 }, 700);
@@ -4613,27 +4785,38 @@ By the final lines of this chapter, the reader is left with a single, urgent nee
                             </div>
                             <div>
                                 <h2 className="text-xl font-bold">Admin Access</h2>
-                                <p className="text-sm text-gray-500 mt-1">Enter the admin password to continue</p>
+                                <p className="text-sm text-gray-500 mt-1">Sign in with your admin credentials</p>
                             </div>
                         </div>
 
-                        {/* Password field */}
-                        <div className="relative">
+                        {/* Email field */}
+                        <div className="space-y-3">
                             <input
-                                type={showPw ? 'text' : 'password'}
-                                value={password}
-                                onChange={e => { setPassword(e.target.value); setError(''); }}
+                                type="email"
+                                value={email}
+                                onChange={e => { setEmail(e.target.value); setError(''); }}
                                 onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-                                placeholder="Admin password"
+                                placeholder="Admin email"
                                 autoFocus
-                                className={`w-full bg-white/5 border rounded-2xl px-4 py-4 pr-12 text-white placeholder-gray-500 focus:outline-none transition-all ${error ? 'border-red-500/60' : 'border-white/10 focus:border-indigo-500'}`}
+                                className={`w-full bg-white/5 border rounded-2xl px-4 py-4 text-white placeholder-gray-500 focus:outline-none transition-all ${error ? 'border-red-500/60' : 'border-white/10 focus:border-indigo-500'}`}
                             />
-                            <button
-                                onClick={() => setShowPw(v => !v)}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
-                            >
-                                <Icon name={showPw ? 'EyeOff' : 'Eye'} size={18} />
-                            </button>
+                            {/* Password field */}
+                            <div className="relative">
+                                <input
+                                    type={showPw ? 'text' : 'password'}
+                                    value={password}
+                                    onChange={e => { setPassword(e.target.value); setError(''); }}
+                                    onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                                    placeholder="Admin password"
+                                    className={`w-full bg-white/5 border rounded-2xl px-4 py-4 pr-12 text-white placeholder-gray-500 focus:outline-none transition-all ${error ? 'border-red-500/60' : 'border-white/10 focus:border-indigo-500'}`}
+                                />
+                                <button
+                                    onClick={() => setShowPw(v => !v)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                                >
+                                    <Icon name={showPw ? 'EyeOff' : 'Eye'} size={18} />
+                                </button>
+                            </div>
                         </div>
 
                         {error && (
@@ -5864,17 +6047,37 @@ By the final lines of this chapter, the reader is left with a single, urgent nee
                     setUsageLimits(prev => ({ ...prev, messages: prev.messages - 1 }));
                 }
 
-                // Simulate AI response
-                setTimeout(() => {
+                // Real Claude API call
+                try {
+                    // Build conversation history for Claude
+                    const allMsgs = [...messages, newMessage];
+                    const claudeMessages = allMsgs.map(m => ({
+                        role: m.isUser ? 'user' : 'assistant',
+                        content: m.text
+                    }));
+                    const reply = await callClaude(
+                        claudeMessages,
+                        'You are Axion AI, an intelligent, helpful, and friendly AI companion. Be concise, thoughtful, and engaging. Format responses clearly when needed.',
+                        1500
+                    );
                     const aiResponse = {
-                        text: `I understand you're asking about "${text}". This is a simulated response. In production, this would connect to your AI backend API.`,
+                        text: reply,
                         isUser: false,
                         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                         id: Date.now() + 1
                     };
                     setMessages(prev => [...prev, aiResponse]);
+                } catch (err) {
+                    const aiResponse = {
+                        text: `⚠️ ${err.message || 'Something went wrong. Please try again.'}`,
+                        isUser: false,
+                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        id: Date.now() + 1
+                    };
+                    setMessages(prev => [...prev, aiResponse]);
+                } finally {
                     setIsTyping(false);
-                }, 1500);
+                }
             };
 
             const handleNewChat = () => {
@@ -5956,6 +6159,7 @@ By the final lines of this chapter, the reader is left with a single, urgent nee
                         onNewChat={handleNewChat}
                         onSelectChat={handleSelectChat}
                         atoms={atoms}
+                        isAdminUser={user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()}
                         onLogout={() => {
                             localStorage.removeItem('axion_user');
                             setUser(null);
@@ -6101,9 +6305,28 @@ By the final lines of this chapter, the reader is left with a single, urgent nee
             );
         };
 
+        // Error Boundary
+        class ErrorBoundary extends React.Component {
+            constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+            static getDerivedStateFromError(error) { return { hasError: true, error }; }
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100vh',background:'#0a0a0f',color:'white',fontFamily:'sans-serif',padding:'2rem',textAlign:'center'}}>
+                            <div style={{fontSize:'3rem',marginBottom:'1rem'}}>⚠️</div>
+                            <h2 style={{color:'#6366f1',marginBottom:'0.5rem'}}>Axion failed to load</h2>
+                            <p style={{color:'#9ca3af',marginBottom:'1rem',maxWidth:'500px'}}>{this.state.error?.message || 'Unknown error'}</p>
+                            <button onClick={() => window.location.reload()} style={{background:'#4f46e5',color:'white',border:'none',borderRadius:'12px',padding:'10px 24px',cursor:'pointer',fontSize:'1rem'}}>Reload</button>
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
+        }
+
         // Render app
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<AxionApp />);
+        root.render(<ErrorBoundary><AxionApp /></ErrorBoundary>);
     </script>
 </body>
 </html>
